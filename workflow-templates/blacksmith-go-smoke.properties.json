@@ -1,0 +1,6 @@
+{
+  "name": "Blacksmith Go Smoke",
+  "description": "Run Go module verification, tests, and build smoke on Blacksmith Linux runners.",
+  "iconName": "octicon terminal",
+  "categories": ["Go", "Continuous integration"]
+}

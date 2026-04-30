@@ -1,0 +1,6 @@
+{
+  "name": "Blacksmith Probe",
+  "description": "Verify Blacksmith runner availability for a KyaniteLabs repository without changing project CI.",
+  "iconName": "octicon rocket",
+  "categories": ["Continuous integration", "Automation"]
+}
