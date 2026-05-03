@@ -1,0 +1,35 @@
+name: Feature Request
+description: Suggest a new feature or improvement
+title: "Feature: "
+labels: ["enhancement", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the suggestion! This issue will be labeled `needs-triage` automatically.
+        Maintainers will review and add the `approved` label if accepted. Our automated pipeline will then implement it.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+      description: What are you trying to do that isn't currently possible?
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: How would you like this to work?
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: What workarounds have you tried?
+  - type: textarea
+    id: examples
+    attributes:
+      label: Examples
+      description: Example inputs, outputs, or API usage
+      render: python

@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions
+    url: ../../discussions/categories/q-a
+    about: Ask questions in Discussions
+  - name: Ideas
+    url: ../../discussions/categories/ideas
+    about: Share early-stage ideas in Discussions
+  - name: Security
+    url: ../../security/advisories/new
+    about: Report security vulnerabilities privately
