@@ -1,0 +1,19 @@
+# KyaniteLabs CODEOWNERS
+# Applied as default for all KyaniteLabs repositories
+#
+# Documentation: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# CI/CD and infrastructure
+/.github/workflows/  @Pastorsimon1798
+
+# Security-sensitive files
+**/credentials*       @Pastorsimon1798
+**/.env*              @Pastorsimon1798
+**/secrets*           @Pastorsimon1798
+
+# Agent identity files
+/CLAUDE.md            @Pastorsimon1798
+/AGENTS.md            @Pastorsimon1798
+
+# Default — all other files
+*                     @Pastorsimon1798
