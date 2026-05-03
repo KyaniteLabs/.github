@@ -186,6 +186,74 @@ When multiple agents work on the same repo:
 - Tunable behavior becomes config/env vars, not code changes
 - Default config works for development without modification
 
+## KyaniteLabs Tech Stack Standard
+
+Every project in KyaniteLabs follows these stack decisions. No exceptions without explicit approval.
+
+### TypeScript Projects
+- **Zero `.js`/`.jsx` files.** Everything is `.ts`/`.tsx`. If a file is JS, convert it.
+- **`tsconfig.json`: `strict: true`, `target: ES2022`, `module: NodeNext`.** No `any` without a justifying comment.
+- **Package manager: pnpm.** Never npm, never yarn. If a repo uses npm, migrate it.
+- **Formatter: prettier.** Linter: eslint with typescript-eslint. Both configured from day one.
+- **Test: vitest.** Not jest.
+- **Build: tsup** for libraries, **tsc** for applications.
+- **Import style: ESM only.** `"type": "module"` in package.json. No CommonJS (`require`, `module.exports`).
+
+### Python Projects
+- **Python 3.11 minimum.** Test on 3.11 and latest.
+- **Config: `pyproject.toml` only.** No setup.py, no setup.cfg, no requirements.txt. Dependencies go in `[project.dependencies]`.
+- **Build backend: hatch.** Not setuptools.
+- **Formatter: ruff format.** Linter: ruff. Not black, not flake8, not isort.
+- **Test: pytest** with `--tb=short`.
+- **Entry points: `[project.scripts]`** in pyproject.toml, not `if __name__ == "__main__"`.
+
+### Dart/Flutter Projects
+- **Dart only.** No embedded JS unless Flutter requires it.
+- **Package manager: pub.**
+- **Test: flutter_test.** Lint: `flutter analyze`.
+
+### Cross-Cutting Rules
+- **One language per project.** No Python+JS repos, no TS+JS mixing.
+- **One package manager per project.**
+- **Dependencies pinned to exact versions.**
+- **Editorconfig** in every repo root for consistent indentation.
+
+## Project Scaffolding
+
+When Kyan (operations agent) receives a project idea via Telegram:
+
+### Phase 1: Research
+1. Find latest official documentation for the relevant framework/library
+2. Check latest stable versions — pin all dependencies exactly
+3. Check GitHub Advisories for security issues in chosen dependencies
+4. Check community best practices (recent posts, discussions)
+5. Check if an existing KyaniteLabs repo solves a similar problem
+
+### Phase 2: Classify
+Determine project type and apply matching tech stack from the rules above.
+
+### Phase 3: Scaffold
+Create a private repo in Pastorsimon1798's personal account with:
+
+**Every project gets:**
+- `.gitignore`, `.editorconfig`, `LICENSE` (MIT)
+- `README.md` (what, why, run, test), `CHANGELOG.md`
+- `CLAUDE.md` + `AGENTS.md` (from org templates + project-specific)
+- `.cursorrules` + `.windsurfrules` (from org templates)
+- `.github/copilot-instructions.md`, `dependabot.yml`, `CODEOWNERS`
+- `.github/workflows/ci.yml` (lint + test + build, Blacksmith runner, concurrency, caching)
+- `.github/ISSUE_TEMPLATE/` (bug_report.yml, feature_request.yml, config.yml)
+
+**Python additionally:** pyproject.toml (hatch), src/project_name/__init__.py, tests/test_smoke.py
+**TypeScript additionally:** package.json (type:module), tsconfig.json (strict), eslint.config.js, .prettierrc, vitest.config.ts, src/index.ts
+
+### Phase 4: Verify
+- Initial commit + push
+- Branch protection on main
+- CI runs green
+- Parity check (CLAUDE.md = AGENTS.md)
+- Report to user: repo URL, stack, CI status
+
 ## Local-First Inference (LM Studio)
 
 All KyaniteLabs projects that require an LLM must use local inference first. Server runs on Tailscale at `100.66.225.85:1234`.
