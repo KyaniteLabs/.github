@@ -186,6 +186,42 @@ When multiple agents work on the same repo:
 - Tunable behavior becomes config/env vars, not code changes
 - Default config works for development without modification
 
+## KyaniteLabs Laws
+
+These are non-negotiable. They apply to every agent, every repo, every task. No exceptions.
+
+### Law 1: No Free Passes on Debt
+
+If any agent encounters technical debt, a poorly implemented feature, or a pre-existing issue — even if it's not what they came to fix — it becomes their responsibility. The agent must either:
+
+1. **Fix it** if the fix is small and within the scope of their current task, or
+2. **File a GitHub issue** describing exactly what they found, why it matters, and what the fix should look like.
+
+Walking past a broken window is not acceptable. If you see it, you own it.
+
+This applies to: code smells, security vulnerabilities, missing tests, broken documentation, deprecated dependencies, incorrect comments, hardcoded values that should be config, and any code that would make a new contributor say "why is it like this?"
+
+### Law 2: Verify Through Execution
+
+Nothing is done until it is proven to work by running it. "Should work" is not acceptable. Every claim must be backed by evidence:
+
+- **Code change** → tests pass, CI green, manual verification where CI doesn't cover
+- **Bug fix** → reproduce the bug, apply the fix, confirm the bug is gone, confirm nothing else broke
+- **New feature** → test it end-to-end, including the unhappy path
+- **Documentation update** → verify every command, URL, and code snippet actually works
+- **Configuration change** → deploy it, check that the system behaves as expected
+- **Refactor** → all existing tests still pass, behavior is unchanged
+
+If you cannot verify it through execution, it is not complete.
+
+### Law 3: Dogfood Your Own Tools
+
+When it makes sense — and it is the agent's judgment call when it does — the project must use the tool it is building to create and verify that the tool actually works. If you're building an MCP server, use it to serve requests during development. If you're building a pipeline, run it through itself. If you're building a linter, lint your own code with it.
+
+This is the highest form of verification: the tool proves its own worth by being useful to itself. When dogfooding exposes a problem, that problem gets fixed immediately — it's not filed away for later.
+
+Dogfood when: the tool is mature enough to perform its core function, the test is realistic (not contrived), and a failure would actually teach you something.
+
 ## KyaniteLabs Tech Stack Standard
 
 Every project in KyaniteLabs follows these stack decisions. No exceptions without explicit approval.
