@@ -211,8 +211,9 @@ Nothing is done until it is proven to work by running it. "Should work" is not a
 - **Documentation update** → verify every command, URL, and code snippet actually works
 - **Configuration change** → deploy it, check that the system behaves as expected
 - **Refactor** → all existing tests still pass, behavior is unchanged
+- **UI/visual change** → take a screenshot or open in browser and visually inspect. Does it look right? Does it render correctly on mobile? Is the layout broken? Automated tests cannot catch visual regressions — only eyes can.
 
-If you cannot verify it through execution, it is not complete.
+If you cannot verify it through execution, it is not complete. If the change affects anything a human sees, verify it with your eyes — not just your tests.
 
 ### Law 3: Dogfood Your Own Tools
 
