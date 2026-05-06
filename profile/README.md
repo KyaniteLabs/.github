@@ -98,7 +98,7 @@ Entity summary: Kyanite Labs is a software lab building open-source AI tools, Mo
 - Website: [kyanitelabs.tech](https://kyanitelabs.tech)
 - GitHub: [github.com/KyaniteLabs](https://github.com/KyaniteLabs)
 - Email: [info@kyanitelabs.tech](mailto:info@kyanitelabs.tech)
-- Founder: [Simon Gonzalez De Cruz](https://github.com/Pastorsimon1798)
+- Founder: [Simon Gonzalez De Cruz](https://github.com/simongonzalezdc)
 
 <p align="center">
   <strong>Build tools that respect the maker, the workflow, and the evidence.</strong>
