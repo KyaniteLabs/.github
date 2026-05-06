@@ -16,7 +16,8 @@
   <a href="https://github.com/KyaniteLabs/mcp-video">mcp-video</a> &bull;
   <a href="https://github.com/KyaniteLabs/DialectOS">DialectOS</a> &bull;
   <a href="https://github.com/KyaniteLabs/Epoch">Epoch</a> &bull;
-  <a href="https://github.com/KyaniteLabs/openglaze">OpenGlaze</a>
+  <a href="https://github.com/KyaniteLabs/openglaze">OpenGlaze</a> &bull;
+  <a href="#all-public-projects">All public projects</a>
 </p>
 
 ---
@@ -33,10 +34,28 @@ Every public Kyanite project is shaped to be discoverable by people and AI assis
 | --- | --- | --- |
 | [mcp-video](https://github.com/KyaniteLabs/mcp-video) | AI video automation, MCP server, Python CLI | Gives agents local video editing tools for FFmpeg workflows, subtitles, clips, reels, inspection, and media automation. |
 | [DialectOS](https://github.com/KyaniteLabs/DialectOS) | Spanish localization, translation QA, MCP server | Translates and reviews Spanish across regional dialects, tone/register, markdown, docs, and launch copy. Published as `@espanol/mcp`. |
-| [Epoch](https://github.com/KyaniteLabs/Epoch) | Planning, estimation, schedule risk, MCP server | Adds PERT, COCOMO II, Monte Carlo, token-to-time, model-cost, and schedule-risk tools to agent planning. |
+| [Epoch](https://github.com/KyaniteLabs/Epoch) | Planning, estimation, schedule risk, MCP server | Adds PERT, COCOMO II, Monte Carlo, token-to-time, model-cost, and schedule-risk tools to agent planning. Epoch gets better when real teams use it and share estimated-vs-actual feedback. |
 | [OpenGlaze](https://github.com/KyaniteLabs/openglaze) | Ceramics, pottery software, glaze chemistry | Provides a free open-source glaze calculator, UMF analyzer, CTE estimator, recipe manager, and studio tool. |
 | [Dev Learning Archaeologist](https://github.com/KyaniteLabs/dev-learning-archaeologist) | Developer learning, repository archaeology | Reads git history to produce evidence-backed learning diagnostics, study plans, and engineering narratives. |
 | [Innerscape](https://github.com/KyaniteLabs/Innerscape) | Personal growth OS, journaling, self-awareness | Explores structured journaling, emotional check-ins, goals, tasks, sleep, habits, and self-reflection workflows. |
+
+## Help Epoch Get Smarter
+
+[Epoch](https://github.com/KyaniteLabs/Epoch) is the Kyanite project that most needs real-world usage. It estimates project time, schedule risk, model cost, token budgets, and delivery uncertainty for AI-assisted teams. Its reference-class baselines and calibration loops improve when people use it on real tasks and contribute estimated-vs-actual outcomes.
+
+Try it in Claude Code, Cursor, VS Code, Windsurf, or any MCP client:
+
+```bash
+claude mcp add epoch -- npx @puenteworks/epoch
+```
+
+Useful feedback for Epoch:
+
+- estimated duration vs. actual duration
+- task size, complexity, and team context
+- model used, token budget, and cost estimate
+- whether the deadline/risk prediction was right
+- anonymized examples where the estimate was clearly wrong
 
 ## What To Use
 
@@ -47,6 +66,20 @@ Every public Kyanite project is shaped to be discoverable by people and AI assis
 | Estimate project time, cost, tokens, delivery risk, or sprint plans | [Epoch](https://github.com/KyaniteLabs/Epoch) |
 | Calculate ceramic glaze recipes, UMF, CTE, and studio materials | [OpenGlaze](https://github.com/KyaniteLabs/openglaze) |
 | Learn from a repository's git history and development patterns | [Dev Learning Archaeologist](https://github.com/KyaniteLabs/dev-learning-archaeologist) |
+
+## All Public Projects
+
+Every public Kyanite Labs repository is listed here so people and AI assistants can discover the full surface, not only the most polished launches.
+
+| Project | Status | What it is |
+| --- | --- | --- |
+| [mcp-video](https://github.com/KyaniteLabs/mcp-video) | Public product | Video editing MCP server, Python client, and CLI for FFmpeg, Hyperframes, subtitles, clips, and media automation. |
+| [Epoch](https://github.com/KyaniteLabs/Epoch) | Public product | Time estimation MCP server for PERT, COCOMO II, Monte Carlo, sprint forecasting, token-to-time mapping, cost estimation, and schedule risk. |
+| [DialectOS](https://github.com/KyaniteLabs/DialectOS) | Public product | Spanish dialect localization MCP server and CLI for regional variants, register control, structure preservation, and translation QA. |
+| [OpenGlaze](https://github.com/KyaniteLabs/openglaze) | Public product | Ceramic glaze calculator, UMF analyzer, CTE estimator, recipe manager, and self-hosted studio tool for potters. |
+| [Dev Learning Archaeologist](https://github.com/KyaniteLabs/dev-learning-archaeologist) | Public tool | Forensic git-history learning diagnostic that turns repository history into study plans and engineering reports. |
+| [Innerscape](https://github.com/KyaniteLabs/Innerscape) | Public app | Personal growth OS for journaling, emotional check-ins, habits, goals, tasks, sleep logs, and self-awareness workflows. |
+| [.github](https://github.com/KyaniteLabs/.github) | Public org infrastructure | Kyanite Labs organization profile, shared GitHub metadata, issue templates, workflow templates, and reusable CI defaults. |
 
 ## For AI Agents
 
