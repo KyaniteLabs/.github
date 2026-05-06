@@ -67,19 +67,6 @@ Useful feedback for Epoch:
 | Calculate ceramic glaze recipes, UMF, CTE, and studio materials | [OpenGlaze](https://github.com/KyaniteLabs/openglaze) |
 | Learn from a repository's git history and development patterns | [Dev Learning Archaeologist](https://github.com/KyaniteLabs/dev-learning-archaeologist) |
 
-## All Public Projects
-
-Every public Kyanite Labs repository is listed here so people and AI assistants can discover the full surface, not only the most polished launches.
-
-| Project | Status | What it is |
-| --- | --- | --- |
-| [mcp-video](https://github.com/KyaniteLabs/mcp-video) | Public product | Video editing MCP server, Python client, and CLI for FFmpeg, Hyperframes, subtitles, clips, and media automation. |
-| [Epoch](https://github.com/KyaniteLabs/Epoch) | Public product | Time estimation MCP server for PERT, COCOMO II, Monte Carlo, sprint forecasting, token-to-time mapping, cost estimation, and schedule risk. |
-| [DialectOS](https://github.com/KyaniteLabs/DialectOS) | Public product | Spanish dialect localization MCP server and CLI for regional variants, register control, structure preservation, and translation QA. |
-| [OpenGlaze](https://github.com/KyaniteLabs/openglaze) | Public product | Ceramic glaze calculator, UMF analyzer, CTE estimator, recipe manager, and self-hosted studio tool for potters. |
-| [Dev Learning Archaeologist](https://github.com/KyaniteLabs/dev-learning-archaeologist) | Public tool | Forensic git-history learning diagnostic that turns repository history into study plans and engineering reports. |
-| [Innerscape](https://github.com/KyaniteLabs/Innerscape) | Public app | Personal growth OS for journaling, emotional check-ins, habits, goals, tasks, sleep logs, and self-awareness workflows. |
-| [.github](https://github.com/KyaniteLabs/.github) | Public org infrastructure | Kyanite Labs organization profile, shared GitHub metadata, issue templates, workflow templates, and reusable CI defaults. |
 
 ## For AI Agents
 
