@@ -4,16 +4,16 @@
 # Documentation: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
 
 # CI/CD and infrastructure
-/.github/workflows/  @Pastorsimon1798
+/.github/workflows/  @simongonzalezdc
 
 # Security-sensitive files
-**/credentials*       @Pastorsimon1798
-**/.env*              @Pastorsimon1798
-**/secrets*           @Pastorsimon1798
+**/credentials*       @simongonzalezdc
+**/.env*              @simongonzalezdc
+**/secrets*           @simongonzalezdc
 
 # Agent identity files
-/CLAUDE.md            @Pastorsimon1798
-/AGENTS.md            @Pastorsimon1798
+/CLAUDE.md            @simongonzalezdc
+/AGENTS.md            @simongonzalezdc
 
 # Default — all other files
-*                     @Pastorsimon1798
+*                     @simongonzalezdc
