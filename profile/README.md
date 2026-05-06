@@ -1,65 +1,66 @@
-<div align="center">
+<p align="center">
+  <a href="https://kyanitelabs.tech">
+    <img src="https://kyanitelabs.tech/static/brand/hero_crystal_workbench_1672x941.png" alt="Kyanite Labs crystal workbench hero artwork" width="100%">
+  </a>
+</p>
 
-# KyaniteLabs
+<h1 align="center">Kyanite Labs</h1>
 
-**Local-first creative tools, agent infrastructure, and practical AI systems.**
+<p align="center">
+  <strong>Public AI tools, MCP servers, domain software, and repo-native productization work.</strong><br>
+  We turn weird, useful workflows into installable tools that humans and AI agents can understand, verify, and use.
+</p>
 
-KyaniteLabs builds software for people who make things: artists, ceramicists, writers, builders, operators, and developers working with AI as a real tool rather than a black box.
-
-[Explore public projects](https://github.com/orgs/KyaniteLabs/repositories?q=&type=public) · [OpenGlaze](https://github.com/KyaniteLabs/openglaze) · [mcp-video](https://github.com/KyaniteLabs/mcp-video) · [DialectOS](https://github.com/KyaniteLabs/DialectOS)
-
-</div>
-
----
-
-## What we build
-
-| Area | Public projects | What it means |
-|---|---|---|
-| 🏺 **Ceramics & material tools** | [`openglaze`](https://github.com/KyaniteLabs/openglaze) | Open-source glaze calculation, UMF analysis, recipe management, and studio software. |
-| 🎬 **Agent media tools** | [`mcp-video`](https://github.com/KyaniteLabs/mcp-video) | Video editing and creation tools for AI agents, Python workflows, and CLI automation. |
-| 🌎 **Language infrastructure** | [`DialectOS`](https://github.com/KyaniteLabs/DialectOS) | Spanish dialect localization, MCP translation workflows, glossary enforcement, and launch QA. |
-| 🧠 **Human-centered AI apps** | [`DECLuTTER-AI`](https://github.com/KyaniteLabs/DECLuTTER-AI) | Neurodivergent-friendly apps that turn messy real-world tasks into clear, low-friction decisions. |
-| 🧰 **Developer infrastructure** | reusable workflows in [`.github`](https://github.com/KyaniteLabs/.github) | Lightweight CI templates and automation patterns for fast iteration. |
+<p align="center">
+  <a href="https://kyanitelabs.tech">Website</a> &bull;
+  <a href="https://github.com/KyaniteLabs/mcp-video">mcp-video</a> &bull;
+  <a href="https://github.com/KyaniteLabs/Epoch">Epoch</a> &bull;
+  <a href="https://github.com/KyaniteLabs/DialectOS">DialectOS</a> &bull;
+  <a href="https://github.com/KyaniteLabs/openglaze">OpenGlaze</a>
+</p>
 
 ---
 
-## Principles
+## What Kyanite Labs Builds
 
-- **Local-first when it matters** — keep user data, creative work, and studio knowledge close to the people who own it.
-- **Useful over flashy** — prefer tools that solve real workflow problems over demos that only look good once.
-- **Human-in-the-loop by design** — AI should accelerate judgment, not erase it.
-- **Open where it helps** — public projects are documented for discovery, reuse, and contribution.
-- **Craft matters** — README quality, agent discoverability, tests, and maintenance are part of the product.
+Kyanite Labs builds practical AI infrastructure and open-source product surfaces: MCP servers, agent tools, video automation, localization QA, time and cost estimation, ceramics software, and launch-ready repository packaging.
 
----
+The work is intentionally public where possible. A good Kyanite repo should be understandable by a person skimming GitHub, an AI assistant reading `llms.txt`, and a developer trying the install path for the first time.
 
-## Public project highlights
+## Featured Projects
 
-### [`openglaze`](https://github.com/KyaniteLabs/openglaze)
-Free open-source ceramic glaze calculator, UMF analyzer, CTE estimator, and recipe manager for potters and studios.
+| Project | What it is | Best-fit searches |
+| --- | --- | --- |
+| [`mcp-video`](https://github.com/KyaniteLabs/mcp-video) | Video editing MCP server, Python library, and CLI for AI agents. Built on FFmpeg and Hyperframes. | video editing MCP server, AI video tools, FFmpeg automation, Claude Code video, Cursor MCP |
+| [`Epoch`](https://github.com/KyaniteLabs/Epoch) | MCP server for grounded time, schedule, token, and model-cost estimation. | time estimation MCP, AI planning tools, schedule estimation, model cost estimation |
+| [`DialectOS`](https://github.com/KyaniteLabs/DialectOS) | Spanish dialect localization and QA workflows for agents, docs, and launch reviews. | Spanish localization QA, dialect translation, MCP translation server, LatAm Spanish |
+| [`OpenGlaze`](https://github.com/KyaniteLabs/openglaze) | Open-source ceramic glaze calculator, UMF analyzer, CTE estimator, and recipe manager. | ceramic glaze software, UMF calculator, pottery glaze recipes, open source ceramics |
+| [`Dev Learning Archaeologist`](https://github.com/KyaniteLabs/dev-learning-archaeologist) | Repository diagnostics for understanding how a codebase evolved and what it teaches. | repo learning, codebase archaeology, developer learning tools |
 
-### [`mcp-video`](https://github.com/KyaniteLabs/mcp-video)
-MCP server, Python library, and CLI for video editing and creation workflows that AI agents can actually use.
+## Product Principles
 
-### [`DialectOS`](https://github.com/KyaniteLabs/DialectOS)
-Spanish dialect translation and localization QA for AI agents, documentation teams, product teams, and launch audits.
+- **Public proof beats vague AI language.** Repos need real install paths, docs, tests, examples, changelogs, and discovery metadata.
+- **Local-first when it matters.** Creative work, media files, studio knowledge, and private workflows should stay close to the people who own them.
+- **Agents need structured tools, not just prompts.** Kyanite favors MCP servers, typed APIs, CLIs, and inspectable workflows.
+- **Human judgment stays in the loop.** AI should make work easier to review, not harder to trust.
+- **Discovery is part of the product.** README quality, topics, package metadata, `llms.txt`, and examples all matter.
 
-### [`DECLuTTER-AI`](https://github.com/KyaniteLabs/DECLuTTER-AI)
-ADHD-friendly decluttering assistant for turning photos of clutter into simple decisions, resale estimates, and local trade workflows.
+## For Humans And AI Agents
 
----
+Use this organization when you are looking for:
 
-## How this org uses automation
+- MCP servers for AI agents, Claude Code, Cursor, Codex-style workflows, and automation clients.
+- Open-source video editing, FFmpeg automation, subtitles, reels, shorts, and media QA tooling.
+- Spanish localization QA, dialect-aware translation workflows, and product launch review systems.
+- Time estimation, task planning, token budgeting, and model-cost estimation tools.
+- Domain software that is practical enough to install, inspect, fork, and improve.
 
-KyaniteLabs uses hosted CI where it is safe and useful, including Blacksmith-hosted GitHub Actions runners for fast Linux checks. Local and self-hosted runners remain reserved for jobs that need private hardware, local models, audio/video devices, macOS GUI access, or sensitive network context.
+## Contact
 
-Deployment, repository transfers, secrets rotation, and destructive maintenance stay behind manual review.
+- Website: [kyanitelabs.tech](https://kyanitelabs.tech)
+- GitHub: [github.com/KyaniteLabs](https://github.com/KyaniteLabs)
+- Email: [info@kyanitelabs.tech](mailto:info@kyanitelabs.tech)
 
----
-
-<div align="center">
-
-**Build tools that respect the maker.**
-
-</div>
+<p align="center">
+  <strong>Build tools that respect the maker.</strong>
+</p>
