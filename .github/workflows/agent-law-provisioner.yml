@@ -1,0 +1,80 @@
+name: Agent Law Provisioner
+
+on:
+  schedule:
+    - cron: "17 9 * * *"
+  workflow_dispatch:
+    inputs:
+      owner:
+        description: "Owner/org to provision. Defaults to this repository owner."
+        required: false
+        default: ""
+      apply:
+        description: "Actually create rulesets and repair PRs. Requires AGENT_LAW_ADMIN_TOKEN for cross-repo writes."
+        required: false
+        default: "true"
+        type: choice
+        options: ["true", "false"]
+      ensure_org_ruleset:
+        description: "Attempt owner-level organization ruleset creation when owner is an org."
+        required: false
+        default: "true"
+        type: choice
+        options: ["true", "false"]
+
+permissions:
+  contents: read
+
+jobs:
+  provision-agent-law:
+    name: provision-agent-law
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout hub
+        uses: actions/checkout@v4
+
+      - name: Provision Agent Law
+        env:
+          AGENT_LAW_ADMIN_TOKEN: ${{ secrets.AGENT_LAW_ADMIN_TOKEN }}
+          WORKFLOW_OWNER: ${{ github.repository_owner }}
+          INPUT_OWNER: ${{ inputs.owner }}
+          INPUT_APPLY: ${{ inputs.apply }}
+          INPUT_ENSURE_ORG_RULESET: ${{ inputs.ensure_org_ruleset }}
+          GITHUB_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          OWNER="${INPUT_OWNER:-}"
+          if [[ -z "$OWNER" ]]; then
+            OWNER="$WORKFLOW_OWNER"
+          fi
+
+          APPLY="${INPUT_APPLY:-true}"
+          ENSURE_ORG_RULESET="${INPUT_ENSURE_ORG_RULESET:-true}"
+
+          if [[ -n "${AGENT_LAW_ADMIN_TOKEN:-}" ]]; then
+            export GH_TOKEN="$AGENT_LAW_ADMIN_TOKEN"
+          else
+            export GH_TOKEN="$GITHUB_TOKEN"
+            echo "::warning::AGENT_LAW_ADMIN_TOKEN is not configured. Running audit-only because the default GITHUB_TOKEN is repo-scoped and cannot provision other repositories."
+            APPLY="false"
+          fi
+
+          args=(--owner "$OWNER" --ensure-repo-rulesets --repair-files)
+          if [[ "$APPLY" == "true" ]]; then
+            args+=(--apply)
+          fi
+          if [[ "$ENSURE_ORG_RULESET" == "true" ]]; then
+            args+=(--ensure-org-ruleset)
+          fi
+
+          python3 scripts/provision-agent-law.py "${args[@]}"
+
+      - name: Upload provisioner report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: agent-law-provisioner-results
+          path: agent-law-provisioner-results.json
+          if-no-files-found: ignore
