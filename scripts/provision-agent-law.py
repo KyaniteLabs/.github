@@ -163,6 +163,8 @@ def ensure_org_ruleset(owner: str, *, apply: bool) -> str:
         return "skipped:not-org"
     listed = gh_api(f"/orgs/{owner}/rulesets", check=False)
     if listed.returncode != 0:
+        if not apply:
+            return "skipped:admin-org-scope-required"
         return "blocked:admin-org-scope-required"
     for item in json.loads(listed.stdout or "[]"):
         if item.get("name") == RULESET_NAME:
@@ -176,6 +178,8 @@ def ensure_org_ruleset(owner: str, *, apply: bool) -> str:
 def ensure_repo_ruleset(repo: Repo, *, apply: bool) -> str:
     listed = gh_api(f"/repos/{repo.name_with_owner}/rulesets", check=False)
     if listed.returncode != 0:
+        if not apply:
+            return "skipped:repo-admin-required"
         return "blocked:repo-admin-required"
     for item in json.loads(listed.stdout or "[]"):
         if item.get("name") == RULESET_NAME:
