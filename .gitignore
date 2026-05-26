@@ -1,0 +1,30 @@
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Local environment and editor state
+.env
+.env.*
+!.env.example
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Local agent/worktree state
+.worktrees/
+.claude/
+.omx/
+.omc/
+
+# Generated logs and archives
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.zip
+*.tgz
+.cache/
+tmp/
+temp/
