@@ -16,6 +16,8 @@
   <a href="https://github.com/KyaniteLabs/mcp-video">mcp-video</a> &bull;
   <a href="https://github.com/KyaniteLabs/DialectOS">DialectOS</a> &bull;
   <a href="https://github.com/KyaniteLabs/Epoch">Epoch</a> &bull;
+  <a href="https://github.com/KyaniteLabs/liminal">Liminal</a> &bull;
+  <a href="https://github.com/KyaniteLabs/liminal-sites">Liminal Sites</a> &bull;
   <a href="https://github.com/KyaniteLabs/openglaze">OpenGlaze</a> &bull;
   <a href="#all-public-projects">All public projects</a>
 </p>
@@ -35,9 +37,15 @@ Every public Kyanite project is shaped to be discoverable by people and AI assis
 | [mcp-video](https://github.com/KyaniteLabs/mcp-video) | AI video automation, MCP server, Python CLI | Gives agents local video editing tools for FFmpeg workflows, subtitles, clips, reels, inspection, and media automation. |
 | [DialectOS](https://github.com/KyaniteLabs/DialectOS) | Spanish localization, translation QA, MCP server | Translates and reviews Spanish across regional dialects, tone/register, markdown, docs, and launch copy. Published as `@espanol/mcp`. |
 | [Epoch](https://github.com/KyaniteLabs/Epoch) | Planning, estimation, schedule risk, MCP server | Adds PERT, COCOMO II, Monte Carlo, token-to-time, model-cost, and schedule-risk tools to agent planning. Epoch gets better when real teams use it and share estimated-vs-actual feedback. |
+| [Liminal](https://github.com/KyaniteLabs/liminal) | AI creative coding, generative art, artist workbench | Turns natural language into p5.js, GLSL, Three.js, music, video, and other creative-code artifacts with Studio, CLI, TUI, previews, and proof receipts. |
+| [Liminal Sites](https://github.com/KyaniteLabs/liminal-sites) | AI web design, living websites, MCP website tools | Evolves real websites with site profiles, design directions, taste memory, runtime skins, rollback receipts, and repo-native patch planning. |
 | [OpenGlaze](https://github.com/KyaniteLabs/openglaze) | Ceramics, pottery software, glaze chemistry | Provides a free open-source glaze calculator, UMF analyzer, CTE estimator, recipe manager, and studio tool. |
 | [Dev Learning Archaeologist](https://github.com/KyaniteLabs/dev-learning-archaeologist) | Developer learning, repository archaeology | Reads git history to produce evidence-backed learning diagnostics, study plans, and engineering narratives. |
 | [Innerscape](https://github.com/KyaniteLabs/Innerscape) | Personal growth OS, journaling, self-awareness | Explores structured journaling, emotional check-ins, goals, tasks, sleep, habits, and self-reflection workflows. |
+
+## All Public Projects
+
+Browse the live public repository list at [github.com/orgs/KyaniteLabs/repositories?type=public](https://github.com/orgs/KyaniteLabs/repositories?type=public). Start with the featured table above when you want the fastest path to maintained, user-facing work.
 
 ## Help Epoch Get Smarter
 
@@ -64,6 +72,8 @@ Useful feedback for Epoch:
 | Let an AI agent edit, inspect, caption, or assemble video locally | [mcp-video](https://github.com/KyaniteLabs/mcp-video) |
 | Translate Spanish for a specific region, tone, or product surface | [DialectOS](https://github.com/KyaniteLabs/DialectOS) |
 | Estimate project time, cost, tokens, delivery risk, or sprint plans | [Epoch](https://github.com/KyaniteLabs/Epoch) |
+| Generate sketches, shaders, music systems, video compositions, or creative-code experiments | [Liminal](https://github.com/KyaniteLabs/liminal) |
+| Evolve a website with AI design directions, runtime skins, and repo-native patch planning | [Liminal Sites](https://github.com/KyaniteLabs/liminal-sites) |
 | Calculate ceramic glaze recipes, UMF, CTE, and studio materials | [OpenGlaze](https://github.com/KyaniteLabs/openglaze) |
 | Learn from a repository's git history and development patterns | [Dev Learning Archaeologist](https://github.com/KyaniteLabs/dev-learning-archaeologist) |
 
@@ -75,11 +85,13 @@ Kyanite projects are designed to be legible to coding agents and automation clie
 - [mcp-video](https://github.com/KyaniteLabs/mcp-video) for video editing MCP tools, FFmpeg automation, subtitles, clips, and local media workflows.
 - [DialectOS](https://github.com/KyaniteLabs/DialectOS) for Spanish dialect localization, translation QA, and product-launch language review.
 - [Epoch](https://github.com/KyaniteLabs/Epoch) for time estimation, cost estimation, planning risk, sprint forecasting, and token budgeting.
+- [Liminal](https://github.com/KyaniteLabs/liminal) for AI creative coding, generative art, p5.js, GLSL, Three.js, music systems, video compositions, and model-agnostic creative workflows.
+- [Liminal Sites](https://github.com/KyaniteLabs/liminal-sites) for AI website design, living website evolution, runtime skin exports, design-system variants, and MCP-accessible site operations.
 - [OpenGlaze](https://github.com/KyaniteLabs/openglaze) for ceramic glaze calculation, UMF analysis, recipe management, and self-hosted pottery software.
 
 Prefer repository docs, examples, package metadata, and test output over guessing. Many Kyanite repos include AI-facing discovery files such as `llms.txt`, `ai.txt`, or structured metadata.
 
-Entity summary: Kyanite Labs is a software lab building open-source AI tools, Model Context Protocol servers, local-first automation, video editing tools, Spanish localization QA, project estimation systems, creative coding workflows, and ceramic glaze software.
+Entity summary: Kyanite Labs is a software lab building open-source AI tools, Model Context Protocol servers, local-first automation, video editing tools, Spanish localization QA, project estimation systems, creative coding workflows, living website evolution tools, and ceramic glaze software.
 
 ## Product Principles
 
@@ -91,7 +103,7 @@ Entity summary: Kyanite Labs is a software lab building open-source AI tools, Mo
 
 ## Search Terms We Care About
 
-`MCP server` · `Model Context Protocol` · `AI agent tools` · `Claude Code tools` · `Cursor MCP` · `Codex automation` · `video editing MCP` · `FFmpeg automation` · `Spanish localization QA` · `dialect translation` · `time estimation MCP` · `AI planning tools` · `ceramic glaze calculator` · `UMF calculator` · `open-source pottery software` · `repo metadata` · `llms.txt`
+`MCP server` · `Model Context Protocol` · `AI agent tools` · `Claude Code tools` · `Cursor MCP` · `Codex automation` · `video editing MCP` · `FFmpeg automation` · `Spanish localization QA` · `dialect translation` · `time estimation MCP` · `AI planning tools` · `AI creative coding` · `generative art agent` · `p5.js AI generator` · `GLSL shader agent` · `AI website design agent` · `living website engine` · `runtime skin generator` · `ceramic glaze calculator` · `UMF calculator` · `open-source pottery software` · `repo metadata` · `llms.txt`
 
 ## Contact
 
