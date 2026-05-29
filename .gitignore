@@ -6,6 +6,8 @@
 .env
 .env.*
 !.env.example
+*.pem
+*.key
 .idea/
 .vscode/
 *.swp
@@ -18,6 +20,8 @@
 .omc/
 
 # Generated logs and archives
+__pycache__/
+*.py[cod]
 *.log
 npm-debug.log*
 pnpm-debug.log*

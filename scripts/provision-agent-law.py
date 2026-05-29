@@ -264,7 +264,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
 
       - name: Verify Empower Orchestrator law
         shell: bash
@@ -337,7 +339,8 @@ def upsert_marker_file(path: Path, block: str, header: str) -> None:
 
 def choose_recipe_path(repo_dir: Path) -> Path:
     # Respect repos that already use a capitalized Docs tree on case-insensitive machines.
-    if (repo_dir / "Docs").exists() and not (repo_dir / "docs").exists():
+    names = {child.name for child in repo_dir.iterdir()} if repo_dir.exists() else set()
+    if "Docs" in names and "docs" not in names:
         return repo_dir / "Docs" / "agent-law" / "empower-orchestrator.md"
     return repo_dir / "docs" / "agent-law" / "empower-orchestrator.md"
 
