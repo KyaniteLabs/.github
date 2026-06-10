@@ -1,9 +1,14 @@
-# KyaniteLabs automation hub
+# KyaniteLabs Shared Config
 
-This repository centralizes KyaniteLabs organization profile content, reusable GitHub Actions workflows, and starter workflow templates.
+Shared workflow templates and org config for the Forgejo instance.
 
-Blacksmith integration policy:
+## Forgejo Actions Workflows
 
-- Use Blacksmith for fast hosted Linux CI on organization repositories.
-- Keep local/self-hosted runners for local model, private hardware, macOS GUI/audio, and network-dependent jobs.
-- Keep deploy, repo transfer, branch protection, and secrets rotation behind manual review.
+- **ci-node.yml** - Node.js CI (build + test)
+- **ci-python.yml** - Python CI (install + pytest)
+- **ci-docker.yml** - Docker build (self-hosted runner)
+
+## Labels
+
+- docker: runs in node:22 containers
+- self-hosted: runs directly on nucbox
