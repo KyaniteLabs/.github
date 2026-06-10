@@ -1,0 +1,7 @@
+name: Verify Test
+on: push
+jobs:
+  test:
+    runs-on: self-hosted
+    steps:
+      - run: echo "Verification test passed at $(date)"
