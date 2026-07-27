@@ -1,6 +1,6 @@
 <p align="center">
   <a href="https://kyanitelabs.tech">
-    <img src="https://kyanitelabs.tech/static/brand/hero_crystal_workbench_1672x941.png" alt="Kyanite Labs crystal workbench hero artwork for AI tools and MCP servers" width="100%">
+    <img src="https://kyanitelabs.tech/static/brand/github-org-hero-hybrid-A-1672x941.png" alt="Kyanite Labs Hybrid A glass crystal mark — mineral instrument lab" width="100%">
   </a>
 </p>
 
