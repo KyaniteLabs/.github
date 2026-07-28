@@ -57,7 +57,7 @@ jobs:
             --signature governed-reports/report.json.sig \
             --public-key governed-main/controls/g006-report-public.pem \
             --schema governed-main/controls/report.schema.json \
-            --expected-public-key-sha256 de82d34ecd322fb7c9bdab204480eb749725cc6d334f60f7836595a9e77d026d \
+            --expected-public-key-sha256 6e88753ddc74d679aeb1db27393298f9bcbd7a5f3dadc8da765bcb9d6d5a43bd \
             --expected-schema-sha256 a4b748e5ed4d74d0c9e9fe45a19dca1c7555538d175cf44f71a6d60dd7d14143 \
             --expected-config-sha256 d8c9ee37010fa4f67fffdce5b43de4643267a6f8c9e445b4aee8cb8e0d884f4a \
             --max-age-seconds 93600
