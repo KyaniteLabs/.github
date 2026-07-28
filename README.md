@@ -1,14 +1,20 @@
-# KyaniteLabs Shared Config
+# KyaniteLabs `.github`
 
-Shared workflow templates and org config for the Forgejo instance.
+Shared org config and workflow templates for Kyanite Labs (GitHub + Forgejo).
 
-## Forgejo Actions Workflows
+## Workflows
 
-- **ci-node.yml** - Node.js CI (build + test)
-- **ci-python.yml** - Python CI (install + pytest)
-- **ci-docker.yml** - Docker build (self-hosted runner)
+| File | Purpose |
+| --- | --- |
+| `ci-node.yml` | Node CI (build + test) |
+| `ci-python.yml` | Python CI (install + pytest) |
+| `ci-docker.yml` | Docker build (self-hosted) |
 
-## Labels
+## Runner labels
 
-- docker: runs in node:22 containers
-- self-hosted: runs directly on nucbox
+| Label | Where it runs |
+| --- | --- |
+| `docker` | `node:22` containers |
+| `self-hosted` | NUCBox host |
+
+Org profile copy for GitHub lives in [`profile/README.md`](profile/README.md).
