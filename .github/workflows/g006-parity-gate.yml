@@ -1,0 +1,63 @@
+name: G006 signed daily parity gate
+
+on:
+  push:
+    branches:
+      - g006-reports
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: g006-parity-gate
+  cancel-in-progress: false
+
+jobs:
+  verify-signed-report:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out governed main controls
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: governed-main
+          persist-credentials: false
+
+      - name: Check out the dedicated report branch
+        uses: actions/checkout@v4
+        with:
+          ref: g006-reports
+          path: governed-reports
+          sparse-checkout: |
+            report.json
+            report.json.sig
+          persist-credentials: false
+
+      - name: Require the exact report-branch file set
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f governed-reports/report.json
+          test -f governed-reports/report.json.sig
+          actual="$(git -C governed-reports ls-files)"
+          expected=$'report.json\nreport.json.sig'
+          test "$actual" = "$expected"
+          test -z "$(git -C governed-reports status --porcelain)"
+
+      - name: Verify fresh signed report, pinned controls, and passed parity
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 governed-main/controls/verify_signed_report.py \
+            --report governed-reports/report.json \
+            --signature governed-reports/report.json.sig \
+            --public-key governed-main/controls/g006-report-public.pem \
+            --schema governed-main/controls/report.schema.json \
+            --expected-public-key-sha256 de82d34ecd322fb7c9bdab204480eb749725cc6d334f60f7836595a9e77d026d \
+            --expected-schema-sha256 a4b748e5ed4d74d0c9e9fe45a19dca1c7555538d175cf44f71a6d60dd7d14143 \
+            --expected-config-sha256 d8c9ee37010fa4f67fffdce5b43de4643267a6f8c9e445b4aee8cb8e0d884f4a \
+            --max-age-seconds 93600
