@@ -1,27 +1,17 @@
-# KyaniteLabs `.github`
+# Kyanite Labs
 
-Shared defaults for Kyanite Labs org repositories (GitHub + Forgejo).
+Kyanite Labs builds local-first tools for makers, agents, and studios — video (Kinocut), Spanish dialects (DialectOS), production readiness (CheckYourself), time estimation (Epoch), ceramics (OpenGlaze), and related craft systems.
 
-## What’s in this repo
+## Products
 
-| Path | Job |
-| --- | --- |
-| [`profile/README.md`](profile/README.md) | Public GitHub org profile |
-| `.gitea/workflows/` | Node / Python / Docker CI templates for Forgejo |
-| `.github/workflows/` | Agent-law + org CI on GitHub |
-| `workflow-templates/` | Reusable GitHub workflow templates |
-| `docs/agent-law/` | Shared agent workflow rules |
-| `scripts/provision-agent-law.py` | Copy agent-law into target repos |
-| `.github/pull_request_template.md` | PR template |
+- [Kinocut](https://github.com/KyaniteLabs/kinocut) — local-first agent video tooling
+- [DialectOS](https://github.com/KyaniteLabs/DialectOS) — Spanish dialect MCP/CLI
+- [CheckYourself](https://github.com/KyaniteLabs/checkyourself) — production-readiness audits
+- [Epoch](https://github.com/KyaniteLabs/Epoch) — time estimation MCP
+- [OpenGlaze](https://github.com/KyaniteLabs/openglaze) — ceramic glaze studio tools
+- [TasteCheck](https://github.com/KyaniteLabs/tastecheck) — frontend craft skills for agents
+- [Elixis](https://github.com/KyaniteLabs/Elixis) — pattern synthesis for brand/identity
 
-Product install paths and feature docs live in each product repository—not here.
+## Org defaults
 
-<!-- EMPOWER_ORCHESTRATOR:START -->
-## Agent-law contribution rule
-
-This repository follows the Empower Orchestrator law in `docs/agent-law/empower-orchestrator.md`.
-
-If a change exposes a repeated task or repeated agent failure, contributors and agents should either ship the smallest durable prevention artifact or explain why this PR is intentionally one-off.
-
-Automation and durable system changes require the scale/severity/reversibility/predictability blast-radius check before dispatch.
-<!-- EMPOWER_ORCHESTRATOR:END -->
+Profile and org-facing defaults for `KyaniteLabs/*` live in this repository. Product docs stay in each product repo.
