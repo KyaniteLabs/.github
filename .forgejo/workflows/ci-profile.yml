@@ -11,6 +11,9 @@ on:
       image:
         type: string
         default: node:26-bookworm@sha256:5c4012d11d9857c42713ba511fbc19645cac1706bb710d51d42b0d301dff7f88
+      artifact_paths:
+        type: string
+        default: .ci-results/
 permissions:
   contents: read
 jobs:
@@ -36,6 +39,6 @@ jobs:
         uses: https://code.forgejo.org/forgejo/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32 # v3
         with:
           name: ci-evidence
-          path: .ci-results/
+          path: ${{ inputs.artifact_paths }}
           if-no-files-found: error
           retention-days: 14
