@@ -10,6 +10,9 @@ It accepts `profile`, `runner`, `image`, and `artifact_paths`; the defaults use 
 existing Docker runner and a digest-pinned Node/Debian environment. Consumers own
 their trigger and PR cancellation policy. Keep private hooks and credentials in
 the project layer, and retain reports from workspace subdirectories explicitly.
+The workflow checks out its pinned shared action with the ordinary short-lived
+job token. This supports installations requiring authenticated public Git access
+without a standing cross-project publisher credential.
 
 ## Version 1 contract
 

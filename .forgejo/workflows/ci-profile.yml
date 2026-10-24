@@ -31,7 +31,16 @@ jobs:
           node --version
           python3 --version
           git --version
-      - uses: https://git.kyanitelabs.tech/KyaniteLabs/.github/actions/ci-profile@2a4a170460b75a34b65fbc798ad9d888f3e80edc
+      # Remote action downloads happen before steps and cannot use this server's
+      # short-lived job authentication. Check out the pinned public source using
+      # the normal job token, then execute it as a local composite action.
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          repository: KyaniteLabs/.github
+          ref: 2a4a170460b75a34b65fbc798ad9d888f3e80edc
+          path: .ci-contract
+          persist-credentials: false
+      - uses: ./.ci-contract/actions/ci-profile
         with:
           profile: ${{ inputs.profile }}
       - name: Retain verification evidence
