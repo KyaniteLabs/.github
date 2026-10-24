@@ -57,6 +57,11 @@ Across four fast shards and the slow job, time before pytest fell from about
 4m46s to 9m54s. The local full precommit suite took 29m41s on that candidate.
 Those observations identify the next experiments, not guaranteed future gains.
 
+A subsequent local profiling sample passed 9,182 tests with 201 skipped in
+30m57s. That sample reinforces the development-loop bottleneck; it does not
+establish a speedup or attribute a regression. Keep local and CI measurements
+separate, including contention from other work during either measurement.
+
 Apply these lessons to every applicable project profile:
 
 1. Separate queue, checkout/setup, execution, and first useful failure. Measure
@@ -97,6 +102,35 @@ alignment. Performance, size, security, dependency-drift, SBOM and provenance
 checks belong in relevant profiles; one identical matrix does not fit all repos.
 
 ## Rollout and rollback
+
+### Qualified adoption, 2026-10-24
+
+The [shared contract](https://git.kyanitelabs.tech/KyaniteLabs/.github/pulls/5)
+passed positive and deliberately failing phase, report, timeout and inventory
+fixtures. The [reusable workflow](https://git.kyanitelabs.tech/KyaniteLabs/.github/pulls/6)
+uses an ordinary short-lived job-token checkout for its pinned shared action.
+The shared repository's postmerge run 23 passed on `25eeff8425dfc00574a3c572de84f98171839ae7`.
+
+The [DialectOS pilot](https://git.kyanitelabs.tech/KyaniteLabs/DialectOS/pulls/38)
+pins reusable workflow `0209ffe2feb69190760cc31491a097fea174550f` and passed
+postmerge run 71 on `6aa60643578e768739f25c1df152b7c59006e7ab`. It executes
+all seven workspace builds, generated/static checks, 1,393 passing package tests
+with one skipped, and built CLI help, dialect-list and error-exit acceptance.
+Separate negative fixtures demonstrated that both corrected build scripts now
+propagate real TypeScript compiler failures. Clean installation of distributed
+tarballs remains a separate acceptance gap. No speedup is claimed against its
+previous workflow, which hid failures and skipped meaningful build validation.
+
+Both pilot branches require the observed `CI / ci/required (pull_request)`
+context with enforcement enabled for administrators too. These are qualified
+consumers, not evidence that every repository has adopted the contract.
+For each subsequent project, record its owner, immutable pin, exact successful
+source/run, actual required context and remaining acceptance gaps here or in the
+project's CI guide. Prioritize failure-masking workflows and missing enforcement
+before adding more expensive gates. Preserve project-specific security, release
+and compatibility checks when replacing a template.
+
+### Expansion procedure
 
 Qualify the shared runner against positive and intentionally failing isolated
 fixtures before adoption. Pilot distinct active project types; require honest
