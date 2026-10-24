@@ -62,6 +62,54 @@ A subsequent local profiling sample passed 9,182 tests with 201 skipped in
 establish a speedup or attribute a regression. Keep local and CI measurements
 separate, including contention from other work during either measurement.
 
+The subsequent profiling change retained per-file JUnit timing reports and
+printed slow call/setup phases without changing the test inventory. Full
+control run 1230 passed in 16m04s on source
+`71cd86a304c94977ed1dcc9ec99df18db181cd32`. Its four fast shards reported
+9,219 cases across 517 files; the separate slow suite passed 159 tests with five
+skipped, and each of the three FFmpeg versions passed 129 tests. The PR run had
+skipped Slow under the existing scope policy, so a green PR alone would not
+have qualified a scheduling change's full-workflow cost.
+
+The observed dependency graph matters: the first fast shard's completion
+releases a runner slot for Slow, while the fourth fast shard starts after
+another shard finishes. A file's destination therefore changes both execution
+time and downstream start times. Compare retained case identities and outcomes
+across all shards after moving files; unchanged totals alone can conceal a
+missing case and a duplicate case. Keep intentional duplicate compatibility
+checks separate from the partitioned test inventory.
+Refresh timing assumptions when the test inventory, toolchain or runner layout
+changes. A historical file-to-shard assignment is not a permanent scheduling
+rule for another project or environment.
+Measure each trigger separately when PR and master/manual workflows run
+different gates. A full-scope improvement does not establish a PR-turnaround
+improvement, and a shorter PR run does not establish full validation cost.
+
+The three-file scheduling experiment on
+`5443f0908ee455b26deae7a73cbbc71500b02259`
+passed [full run 1231](https://git.kyanitelabs.tech/KyaniteLabs/kinocut/actions/runs/1231)
+in 15m44s versus the control's 16m04s: 20 seconds, or 2.1%, in one comparison.
+All 9,219 fast-case identities and pass/skip outcomes matched, Slow passed
+159 tests with five skipped, and each FFmpeg version passed 129 tests.
+The first shard released Slow about 45 seconds earlier, but Slow itself took
+about 24 seconds longer. Aggregate logged job spans increased from 2,566.904s
+to 2,657.427s, about 90.5 seconds or 3.5%. Those spans are elapsed job time,
+not CPU utilization measurements.
+
+The scheduling candidate was rejected and remains outside canonical master.
+One small wall-time difference with higher aggregate job time does not qualify
+an efficiency improvement or establish faster PR feedback. Retain the profiling
+and the existing scheduling; target expensive media calls and the local full
+validation loop next. This result narrows the return from this reshuffle, not
+the potential of every future optimization.
+
+A second full local sample passed the same 9,182 tests with 201 skipped in
+32m55s. Detailed audio profiling put a dominant encode comparison at 14.52s
+and repeated media setup at roughly 0.4s per case. These samples do not show a
+local speedup, and a small fixture cleanup alone would not resolve the full
+development-loop cost. Preserve mandatory full validation while qualifying
+any faster local feedback path.
+
 Apply these lessons to every applicable project profile:
 
 1. Separate queue, checkout/setup, execution, and first useful failure. Measure
