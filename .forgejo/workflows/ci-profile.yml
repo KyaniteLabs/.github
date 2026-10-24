@@ -1,0 +1,53 @@
+name: Project CI profile
+on:
+  workflow_call:
+    inputs:
+      profile:
+        type: string
+        default: .ci/profile.json
+      runner:
+        type: string
+        default: docker
+      image:
+        type: string
+        default: node:26-bookworm@sha256:5c4012d11d9857c42713ba511fbc19645cac1706bb710d51d42b0d301dff7f88
+      artifact_paths:
+        type: string
+        default: .ci-results/
+permissions:
+  contents: read
+jobs:
+  required:
+    name: ci/required
+    runs-on: ${{ inputs.runner }}
+    container:
+      image: ${{ inputs.image }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
+      - name: Record toolchain
+        run: |
+          node --version
+          python3 --version
+          git --version
+      # Remote action downloads happen before steps and cannot use this server's
+      # short-lived job authentication. Check out the pinned public source using
+      # the normal job token, then execute it as a local composite action.
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          repository: KyaniteLabs/.github
+          ref: 2a4a170460b75a34b65fbc798ad9d888f3e80edc
+          path: .ci-contract
+          persist-credentials: false
+      - uses: ./.ci-contract/actions/ci-profile
+        with:
+          profile: ${{ inputs.profile }}
+      - name: Retain verification evidence
+        if: ${{ always() }}
+        uses: https://code.forgejo.org/forgejo/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32 # v3
+        with:
+          name: ci-evidence
+          path: ${{ inputs.artifact_paths }}
+          if-no-files-found: error
+          retention-days: 14

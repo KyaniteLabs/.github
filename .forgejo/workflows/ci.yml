@@ -13,6 +13,8 @@ jobs:
   required:
     name: ci/required
     runs-on: docker
+    container:
+      image: node:26-bookworm@sha256:5c4012d11d9857c42713ba511fbc19645cac1706bb710d51d42b0d301dff7f88
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:

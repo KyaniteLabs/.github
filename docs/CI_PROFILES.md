@@ -5,6 +5,15 @@ visible. The shared `actions/ci-profile` action runs a project-owned
 `.ci/profile.json`. Consumers pin the shared action to a reviewed commit. A shared
 change does not silently alter every project's checks.
 
+`.forgejo/workflows/ci-profile.yml` exposes the same action as a reusable workflow.
+It accepts `profile`, `runner`, `image`, and `artifact_paths`; the defaults use an
+existing Docker runner and a digest-pinned Node/Debian environment. Consumers own
+their trigger and PR cancellation policy. Keep private hooks and credentials in
+the project layer, and retain reports from workspace subdirectories explicitly.
+The workflow checks out its pinned shared action with the ordinary short-lived
+job token. This supports installations requiring authenticated public Git access
+without a standing cross-project publisher credential.
+
 ## Version 1 contract
 
 Profiles declare argument arrays, test-file globs, dependency files, and explicit

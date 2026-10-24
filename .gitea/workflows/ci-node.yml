@@ -1,17 +1,13 @@
-name: CI
+name: Node CI
+# Declare the project's .ci/profile.json first; see docs/CI_PROFILES.md.
 on:
   push:
     branches: [main]
   pull_request:
     branches: [main]
+concurrency:
+  group: ci-pr-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
-  build:
-    runs-on: docker
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-      - run: npm ci
-      - run: npm run build --if-present
-      - run: npm test
+  ci:
+    uses: KyaniteLabs/.github/.forgejo/workflows/ci-profile.yml@0209ffe2feb69190760cc31491a097fea174550f
