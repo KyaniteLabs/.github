@@ -1,0 +1,22 @@
+name: Measured CI profile
+description: Execute explicit required phases without hiding failures and retain source-bound timings.
+inputs:
+  profile:
+    description: Project-owned version 1 JSON profile, relative to the checkout
+    default: .ci/profile.json
+runs:
+  using: composite
+  steps:
+    - name: Ensure profile runtime
+      shell: bash
+      run: |
+        set -euo pipefail
+        if ! command -v python3 >/dev/null; then
+          apt-get update -qq
+          apt-get install -y -qq python3
+        fi
+    - name: Execute project contract
+      shell: bash
+      env:
+        CI_PROFILE_PATH: ${{ inputs.profile }}
+      run: python3 "$GITHUB_ACTION_PATH/run.py" "$CI_PROFILE_PATH"

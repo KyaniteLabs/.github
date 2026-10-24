@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "test_globs": ["tests/test_*.py"],
+  "dependency_files": [".ci/profile.json"],
+  "junit_reports": [".ci-results/tests.xml"],
+  "steps": [
+    {"name": "Install isolated test tools", "phase": "install", "argv": ["bash", "-euo", "pipefail", "-c", "apt-get update -qq && apt-get install -y -qq python3-venv && python3 -m venv .venv && .venv/bin/pip install --quiet pytest==9.1.1 ruff==0.15.7"]},
+    {"name": "Lint CI contract", "phase": "verify", "argv": [".venv/bin/ruff", "check", "actions/ci-profile", "tests/test_ci_profile.py"]},
+    {"name": "Compile shipped Python tools", "phase": "build", "argv": ["python3", "-m", "compileall", "-q", "scripts", "actions/ci-profile"]},
+    {"name": "Run real tests and negative fixtures", "phase": "test", "argv": [".venv/bin/python", "-m", "pytest", "tests", "-q", "--tb=short", "--junitxml=.ci-results/tests.xml"]},
+    {"name": "Exercise shipped command", "phase": "acceptance", "argv": ["python3", "scripts/check-agent-parity.py", "--help"]}
+  ]
+}
