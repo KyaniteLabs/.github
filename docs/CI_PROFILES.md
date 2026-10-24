@@ -132,6 +132,30 @@ and compatibility checks when replacing a template.
 
 ### Expansion procedure
 
+Run `python3 scripts/ci_adoption_audit.py --repo OWNER/REPO --pull-request NUMBER`
+with the existing configured `fj` credential to repeat the read-only adoption
+checks. It records the default source, immutable shared pin, declared profile
+phases, enabled protection rules, administrator enforcement, and the supplied
+PR's emitted status names. Failure-masking candidates are line-numbered for
+review; optional fallback commands can be legitimate. Missing or unavailable
+lookups remain unknown and make the audit incomplete. A complete audit means
+the lookups completed, not that the project's CI or shipped product is accepted.
+Without `--pull-request`, default-branch statuses are shown separately and no
+comparison to PR-specific required names is inferred.
+Pattern-based protection rules are listed for review rather than assuming the
+installed server's glob semantics; unknown enforcement is represented as null.
+Required-context glob patterns also remain separate from literal-name matching.
+An empty required-context list is not a disabled status gate: the installed
+[Forgejo 15 implementation](https://codeberg.org/forgejo/forgejo/src/tag/v15.0.10/services/pull/commit_status.go)
+aggregates reported statuses in that case. Explicit names additionally guard
+against an expected check disappearing. Preserve an existing aggregate policy
+until a replacement's required names and behavior are qualified.
+
+Keep private repository inventories and audit output private. This command does
+not create credentials, change protections, execute project code, migrate a
+consumer, or grant release authority. Use its evidence to prioritize cohorts,
+then qualify each project's actual execution and artifact acceptance.
+
 Qualify the shared runner against positive and intentionally failing isolated
 fixtures before adoption. Pilot distinct active project types; require honest
 pass/fail behavior and the actual branch gates before expanding. Compare repeated
