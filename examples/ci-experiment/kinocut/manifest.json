@@ -1,0 +1,104 @@
+{
+  "version": 1,
+  "design": "retrospective",
+  "objective": "Reduce full-scope workflow time without increasing aggregate logged job time",
+  "policy": {
+    "minimum_samples": 2,
+    "min_elapsed_reduction_percent": 5,
+    "max_aggregate_job_increase_percent": 0,
+    "allowed_input_changes": [
+      "workflow_sha256"
+    ],
+    "equivalent_triggers": [
+      "push",
+      "workflow_dispatch"
+    ],
+    "trigger_equivalence_reason": "Retrospective comparison: normal master push and manual candidate dispatch executed the same eleven full-scope gates and application workload. PR runs, which skip Slow, are excluded."
+  },
+  "baseline": [
+    {
+      "run_id": "kinocut/run/1230",
+      "format": "forgejo-logged-workflow-v1",
+      "receipt": "control.json",
+      "receipt_sha256": "81b0612e0eaa86be4f9a1a6b1b393569775028eb6d2f56ec22fc4678567a1392",
+      "source_sha": "71cd86a304c94977ed1dcc9ec99df18db181cd32",
+      "context": "ci-workflow",
+      "trigger": "push",
+      "gates": [
+        "dep-audit",
+        "lint",
+        "secret-scan",
+        "test (0)",
+        "test (1)",
+        "test (2)",
+        "test (3)",
+        "test-ffmpeg-matrix (ffmpeg-n6.1.3-linux64-gpl-6.1.tar.xz, autobuild-2025-08-31-13-00, 6)",
+        "test-ffmpeg-matrix (ffmpeg-n7.1.5-1-g7d0e842004-linux64-gpl-7.1.tar.xz, autobuild-2026-06-30-13-34, 7)",
+        "test-ffmpeg-matrix (ffmpeg-n8.1.2-21-gce3c09c101-linux64-gpl-8.1.tar.xz, autobuild-2026-06-30-13-34, 8)",
+        "test-slow"
+      ],
+      "workflow_sha256": "56e713be1d185750e36122dce96719b44879e7a15c4275f8fcc50f5b686d1671",
+      "workload_sha256": "26978113162cf21eaf92e1121884e84a0996df932fc11b2dbaaace5152dfc422",
+      "test_scope": "partitioned fast suite; other gates compared by execution status and aggregate test counts",
+      "images": {
+        "0": "git.kyanitelabs.tech/kyanitelabs/ci-images-base:v1",
+        "1": "git.kyanitelabs.tech/kyanitelabs/kinocut-ci-noble-node18@sha256:635abde5712c26936fdeb175b5a5cb1f4765d6449e6e4937959a1b7e5ae59e0e",
+        "2": "git.kyanitelabs.tech/kyanitelabs/kinocut-ci-noble@sha256:32af33053e0b2163beb8e57b8523232a89990fe4e110e836b38475776190f07b",
+        "3": "git.kyanitelabs.tech/kyanitelabs/ci-images-ffmpeg-${{ matrix.major }}:v1",
+        "4": "git.kyanitelabs.tech/kyanitelabs/ci-images-base:v1",
+        "5": "git.kyanitelabs.tech/kyanitelabs/ci-images-base:v1"
+      },
+      "dependencies": {
+        "pyproject.toml": "95757c29e779d5e92e4df00c3b259bddb7d8f162438079b199cdb941c6ce0c38"
+      },
+      "cache_condition": "warm image layers; first three fast download-cache misses, fourth hit",
+      "tests": {
+        "summary": "control-tests.json",
+        "sha256": "e9a8271d87b3fb6771656b15e5c8d158f297f56e80e6709cf84ae852c3cdf5d9"
+      }
+    }
+  ],
+  "candidate": [
+    {
+      "run_id": "kinocut/run/1231",
+      "format": "forgejo-logged-workflow-v1",
+      "receipt": "candidate.json",
+      "receipt_sha256": "a1b73201bebbfb7d0b1ec91d3338b7d7697f8fe7f0b857238240cbb8d6efbbfd",
+      "source_sha": "5443f0908ee455b26deae7a73cbbc71500b02259",
+      "context": "ci-workflow",
+      "trigger": "workflow_dispatch",
+      "gates": [
+        "dep-audit",
+        "lint",
+        "secret-scan",
+        "test (0)",
+        "test (1)",
+        "test (2)",
+        "test (3)",
+        "test-ffmpeg-matrix (ffmpeg-n6.1.3-linux64-gpl-6.1.tar.xz, autobuild-2025-08-31-13-00, 6)",
+        "test-ffmpeg-matrix (ffmpeg-n7.1.5-1-g7d0e842004-linux64-gpl-7.1.tar.xz, autobuild-2026-06-30-13-34, 7)",
+        "test-ffmpeg-matrix (ffmpeg-n8.1.2-21-gce3c09c101-linux64-gpl-8.1.tar.xz, autobuild-2026-06-30-13-34, 8)",
+        "test-slow"
+      ],
+      "workflow_sha256": "6ac907165d9f1e5bd8e3e4335f4574e107ed7a9acbfe69f80c6a0e3a46105e72",
+      "workload_sha256": "26978113162cf21eaf92e1121884e84a0996df932fc11b2dbaaace5152dfc422",
+      "test_scope": "partitioned fast suite; other gates compared by execution status and aggregate test counts",
+      "images": {
+        "0": "git.kyanitelabs.tech/kyanitelabs/ci-images-base:v1",
+        "1": "git.kyanitelabs.tech/kyanitelabs/kinocut-ci-noble-node18@sha256:635abde5712c26936fdeb175b5a5cb1f4765d6449e6e4937959a1b7e5ae59e0e",
+        "2": "git.kyanitelabs.tech/kyanitelabs/kinocut-ci-noble@sha256:32af33053e0b2163beb8e57b8523232a89990fe4e110e836b38475776190f07b",
+        "3": "git.kyanitelabs.tech/kyanitelabs/ci-images-ffmpeg-${{ matrix.major }}:v1",
+        "4": "git.kyanitelabs.tech/kyanitelabs/ci-images-base:v1",
+        "5": "git.kyanitelabs.tech/kyanitelabs/ci-images-base:v1"
+      },
+      "dependencies": {
+        "pyproject.toml": "95757c29e779d5e92e4df00c3b259bddb7d8f162438079b199cdb941c6ce0c38"
+      },
+      "cache_condition": "warm image layers; first three fast download-cache misses, fourth hit",
+      "tests": {
+        "summary": "candidate-tests.json",
+        "sha256": "bb4bc41c515a8a83d246f6728cc0baeea40b560b86536de82873d66cf599e658"
+      }
+    }
+  ]
+}

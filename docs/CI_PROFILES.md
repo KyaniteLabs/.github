@@ -45,6 +45,11 @@ behavior, and retain a recovery path.
 
 ## Carry forward the Kinocut measurements
 
+For a source-bound comparison of retained profile or workflow receipts, use
+the [CI experiment command](CI_EXPERIMENTS.md). Its enforced regression fixtures
+carry these lessons into future shared CI changes and include the retained
+Kinocut control/candidate pair. Projects own their experiment policy and pins.
+
 The initial scheduling comparison observed 29m37s versus 21m08s; test-runtime
 variance means that difference cannot all be attributed to scheduling. A later
 reusable-toolchain improvement reduced normal master CI from 20m34s to 15m55s
