@@ -1,0 +1,130 @@
+{
+  "run": 1231,
+  "commit": "5443f0908ee455b26deae7a73cbbc71500b02259",
+  "status": "success",
+  "elapsed_s": 944,
+  "aggregate_logged_job_span_s": 2657.427,
+  "jobs": [
+    {
+      "job": "lint",
+      "status": 1,
+      "span_s": 11.014,
+      "started_at": "2026-10-24T17:41:15.955353+00:00",
+      "ended_at": "2026-10-24T17:41:26.968998+00:00"
+    },
+    {
+      "job": "secret-scan",
+      "status": 1,
+      "span_s": 14.02,
+      "started_at": "2026-10-24T17:41:29.937254+00:00",
+      "ended_at": "2026-10-24T17:41:43.956954+00:00"
+    },
+    {
+      "job": "test (0)",
+      "status": 1,
+      "span_s": 598.869,
+      "started_at": "2026-10-24T17:41:30.494433+00:00",
+      "ended_at": "2026-10-24T17:51:29.363376+00:00",
+      "passed": 2250,
+      "skipped": 23,
+      "pytest_s": 549.14,
+      "before_pytest_s": 42.267,
+      "pip_cache_restored": false,
+      "pip_cache_miss": true,
+      "pip_cache_saved": true
+    },
+    {
+      "job": "test (1)",
+      "status": 1,
+      "span_s": 392.056,
+      "started_at": "2026-10-24T17:41:30.487836+00:00",
+      "ended_at": "2026-10-24T17:48:02.543475+00:00",
+      "passed": 2179,
+      "skipped": 1,
+      "pytest_s": 341.59,
+      "before_pytest_s": 41.362,
+      "pip_cache_restored": false,
+      "pip_cache_miss": true,
+      "pip_cache_saved": true
+    },
+    {
+      "job": "dep-audit",
+      "status": 1,
+      "span_s": 37.658,
+      "started_at": "2026-10-24T17:41:45.926928+00:00",
+      "ended_at": "2026-10-24T17:42:23.584597+00:00"
+    },
+    {
+      "job": "test (2)",
+      "status": 1,
+      "span_s": 724.013,
+      "started_at": "2026-10-24T17:42:25.939460+00:00",
+      "ended_at": "2026-10-24T17:54:29.952489+00:00",
+      "passed": 2716,
+      "skipped": 20,
+      "pytest_s": 673.17,
+      "before_pytest_s": 42.433,
+      "pip_cache_restored": false,
+      "pip_cache_miss": true,
+      "pip_cache_saved": true
+    },
+    {
+      "job": "test (3)",
+      "status": 1,
+      "span_s": 387.145,
+      "started_at": "2026-10-24T17:48:06.493527+00:00",
+      "ended_at": "2026-10-24T17:54:33.638264+00:00",
+      "passed": 2021,
+      "skipped": 9,
+      "pytest_s": 342.26,
+      "before_pytest_s": 42.139,
+      "pip_cache_restored": true,
+      "pip_cache_miss": false,
+      "pip_cache_saved": false
+    },
+    {
+      "job": "test-slow",
+      "status": 1,
+      "span_s": 326.452,
+      "started_at": "2026-10-24T17:51:32.434200+00:00",
+      "ended_at": "2026-10-24T17:56:58.886693+00:00",
+      "passed": 159,
+      "skipped": 5,
+      "pytest_s": 284.58,
+      "before_pytest_s": 41.068
+    },
+    {
+      "job": "test-ffmpeg-matrix (ffmpeg-n6.1.3-linux64-gpl-6.1.tar.xz, autobuild-2025-08-31-13-00, 6)",
+      "status": 1,
+      "span_s": 60.461,
+      "started_at": "2026-10-24T17:54:37.943732+00:00",
+      "ended_at": "2026-10-24T17:55:38.404310+00:00",
+      "passed": 129,
+      "skipped": 0,
+      "pytest_s": 17.5,
+      "before_pytest_s": 42.566
+    },
+    {
+      "job": "test-ffmpeg-matrix (ffmpeg-n7.1.5-1-g7d0e842004-linux64-gpl-7.1.tar.xz, autobuild-2026-06-30-13-34, 7)",
+      "status": 1,
+      "span_s": 57.74,
+      "started_at": "2026-10-24T17:54:38.482388+00:00",
+      "ended_at": "2026-10-24T17:55:36.222007+00:00",
+      "passed": 129,
+      "skipped": 0,
+      "pytest_s": 15.72,
+      "before_pytest_s": 41.809
+    },
+    {
+      "job": "test-ffmpeg-matrix (ffmpeg-n8.1.2-21-gce3c09c101-linux64-gpl-8.1.tar.xz, autobuild-2026-06-30-13-34, 8)",
+      "status": 1,
+      "span_s": 47.999,
+      "started_at": "2026-10-24T17:55:40.463178+00:00",
+      "ended_at": "2026-10-24T17:56:28.462336+00:00",
+      "passed": 129,
+      "skipped": 0,
+      "pytest_s": 10.92,
+      "before_pytest_s": 36.879
+    }
+  ]
+}
