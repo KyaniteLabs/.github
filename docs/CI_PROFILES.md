@@ -165,7 +165,7 @@ These come from the cohort rollouts across 25 repositories, with independent rev
 - **A tool with no rules passes everything.** For example, an html-validate config without `extends` enables zero rules. Pin versions (npx `pkg@x.y.z` or a lockfile) and extend a real preset.
 - **Acceptance must be able to fail.** SPA preview servers return `index.html` (200) for every path, and static servers return directory listings. Check content type plus a body marker, and require a 404 for a missing path.
 - **Test the runtime production uses** (Dockerfile base image or interpreter), digest-pin images and SHA-pin actions, and run as root-safe: CI containers run as root, so `chmod 000` does not block reads there.
-- **Direct pushes to default branches are disabled** (`enable_push: false`, administrators included). The PR plus the repo's required CI check is the only path in — the context name is per repo (most require `ci/required`; liminal requires `Forgejo CI / fast-gate`, Epoch additionally `node-22-floor`). Independent review before merge is by convention, recorded in the PR body, since approval counts (`required_approvals`) are 0.
+- **Direct pushes to default branches are disabled** (`enable_push: false`, administrators included). The PR plus the repo's required CI check is the only path in. Context names are per repo and matched as exact strings — Forgejo appends the triggering event, e.g. `CI / ci/required (pull_request)`; liminal requires `Forgejo CI / fast-gate (pull_request)`, Epoch additionally `CI / node-22-floor (pull_request)`. Independent review before merge is by convention, recorded in the PR body, since approval counts (`required_approvals`) are 0.
 
 ## Rollout and rollback
 
