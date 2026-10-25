@@ -154,6 +154,19 @@ Docs/policy/skills: generated-source parity, command/link checks, and schema/API
 alignment. Performance, size, security, dependency-drift, SBOM and provenance
 checks belong in relevant profiles; one identical matrix does not fit all repos.
 
+## Layer 1 rules learned in rollout (2026-10-25)
+
+These come from the cohort rollouts across 25 repositories, with independent review of every PR. Each rule fixed a real failure.
+
+- **Concurrency must never cancel or replace a default-branch run.** Key the group per pull request for PR events and per commit SHA otherwise:
+  `${{ github.workflow }}-${{ github.event.pull_request.number && format('pr-{0}', github.event.pull_request.number) || github.sha }}`, and set `cancel-in-progress: ${{ github.event_name == 'pull_request' }}`. A single group per ref lets a newer queued push replace a pending main run, so a merge commit can end with no result.
+- **Declare `shell: bash`** (workflow `defaults` or per step) whenever steps use `pipefail`, `mapfile`, `[[` or process substitution. Several runners serve the `docker` label, and they differ: v1.0.8 runs container jobs under `sh -e`, where `pipefail` is illegal, while v12 runners use bash.
+- **Silent validators must print evidence.** v12 runners log step output but no step headers. html-validate, `node --check` and similar tools print nothing on success, so a passing gate is indistinguishable from one that never ran. End each such step with an evidence line that names the tool, the version and the file count.
+- **A tool with no rules passes everything.** For example, an html-validate config without `extends` enables zero rules. Pin versions (npx `pkg@x.y.z` or a lockfile) and extend a real preset.
+- **Acceptance must be able to fail.** SPA preview servers return `index.html` (200) for every path, and static servers return directory listings. Check content type plus a body marker, and require a 404 for a missing path.
+- **Test the runtime production uses** (Dockerfile base image or interpreter), digest-pin images and SHA-pin actions, and run as root-safe: CI containers run as root, so `chmod 000` does not block reads there.
+- **Direct pushes to default branches are disabled** (`enable_push: false`, administrators included). The PR plus the required `ci/required` check is the only path in, with an independent review recorded on every PR.
+
 ## Rollout and rollback
 
 ### Qualified adoption, 2026-10-24
