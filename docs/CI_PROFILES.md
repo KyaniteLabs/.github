@@ -167,6 +167,17 @@ These come from the cohort rollouts across 25 repositories, with independent rev
 - **Test the runtime production uses** (Dockerfile base image or interpreter), digest-pin images and SHA-pin actions, and run as root-safe: CI containers run as root, so `chmod 000` does not block reads there.
 - **Direct pushes to default branches are disabled** (`enable_push: false`, administrators included). The PR plus the repo's required CI check is the only path in. Context names are per repo and matched as exact strings — Forgejo appends the triggering event, e.g. `CI / ci/required (pull_request)`; liminal requires `Forgejo CI / fast-gate (pull_request)`, Epoch additionally `CI / node-22-floor (pull_request)`. Independent review before merge is by convention, recorded in the PR body, since approval counts (`required_approvals`) are 0.
 
+## Layer 5: self-description consistency
+
+`scripts/self_description_check.py` is offline and stdlib-only. It treats the package manifest (`package.json`, `pyproject.toml` or `setup.py`) as the source of truth for the package name and version, and fails when anything else the repository ships disagrees with it:
+- the newest released `CHANGELOG.md` entry, and more than one `Unreleased` section;
+- `server.json` (MCP registry) versions;
+- MCPB, plugin and extension manifest versions;
+- README `name@x.y.z` pins;
+- README install commands that name a near-miss of the package. Running a declared bin with `npx <bin>` after install is allowed.
+
+Each passing check prints `gate evidence:` lines. Run it as a `verify` phase step: `python3 <contract>/scripts/self_description_check.py`. Creating tags and releases remains a separately authorized publishing step; this check only proves that what the repository says about itself is consistent.
+
 ## Rollout and rollback
 
 ### Qualified adoption, 2026-10-24
