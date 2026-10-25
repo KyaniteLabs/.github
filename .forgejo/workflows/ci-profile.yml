@@ -37,7 +37,7 @@ jobs:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           repository: KyaniteLabs/.github
-          ref: 2a4a170460b75a34b65fbc798ad9d888f3e80edc
+          ref: 94ad029697905750d7def204e522124763c3b166
           path: .ci-contract
           persist-credentials: false
       - uses: ./.ci-contract/actions/ci-profile
