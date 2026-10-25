@@ -28,7 +28,7 @@ import re
 import sys
 from pathlib import Path
 
-SEMVER = r"\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?"
+SEMVER = r"\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?(?![\w.])"
 # Manifests whose top-level "version" describes this package. A root
 # manifest.json is checked only when it is an MCPB/DXT manifest; browser
 # extensions and web app manifests version themselves independently.
@@ -41,18 +41,30 @@ VERSIONED_MANIFESTS = (
 INSTALL = re.compile(
     r"(npm\s+(?:i|install|add)|pnpm\s+(?:add|install|i)|yarn\s+add|bun\s+add|pip3?\s+install|pipx\s+install|"
     r"uv\s+(?:tool\s+install|add|pip\s+install)|npx|uvx)"
-    r"((?:\s+-{1,2}[\w-]+)*)\s+(@?[\w./-]+)"
+    r"((?:[ \t]+-{1,2}[\w-]+)*)[ \t]+(@?[\w./-]+)"
 )
+
+
+# "[Unreleased]" with anything after it, or a bare "Unreleased" alone or before a dash;
+# "Unreleased fixes" is an ordinary subsection title.
+UNRELEASED = re.compile(r"\[unreleased\]|unreleased\s*(?:$|[—–-])", re.I)
 
 
 class Unparseable(Exception):
     """A file exists but cannot be read as the expected structure."""
 
 
+def read_text(path: Path) -> str:
+    try:
+        return path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError) as exc:
+        raise Unparseable(f"{path.name}: unreadable ({exc.__class__.__name__})") from None
+
+
 def load_json(path: Path) -> dict:
     try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        data = json.loads(read_text(path))
+    except json.JSONDecodeError as exc:
         raise Unparseable(f"{path.name}: unparseable ({exc.__class__.__name__})") from None
     if not isinstance(data, dict):
         raise Unparseable(f"{path.name}: expected a JSON object, got {type(data).__name__}")
@@ -65,18 +77,26 @@ def setup_call_keywords(text: str) -> dict[str, str]:
         tree = ast.parse(text)
     except SyntaxError:
         raise Unparseable("setup.py: unparseable (SyntaxError)") from None
+    found: dict[str, str] = {}
     for node in ast.walk(tree):
         if not isinstance(node, ast.Call):
             continue
         func = node.func
-        name = getattr(func, "id", None) or getattr(func, "attr", None)
-        if name == "setup":
-            return {
-                kw.arg: kw.value.value
-                for kw in node.keywords
-                if kw.arg and isinstance(kw.value, ast.Constant) and isinstance(kw.value.value, str)
+        if isinstance(func, ast.Name):
+            is_setup = func.id == "setup"
+        else:
+            is_setup = isinstance(func, ast.Attribute) and func.attr == "setup" and ast.unparse(func.value) in {
+                "setuptools",
+                "distutils.core",
             }
-    return {}
+        keywords = {
+            kw.arg: kw.value.value
+            for kw in node.keywords
+            if kw.arg and isinstance(kw.value, ast.Constant) and isinstance(kw.value.value, str)
+        }
+        if is_setup and "version" in keywords:
+            found = keywords
+    return found
 
 
 def package_source(root: Path) -> tuple[str, str, str] | None:
@@ -91,14 +111,16 @@ def package_source(root: Path) -> tuple[str, str, str] | None:
         import tomllib  # Python 3.11+; imported here so npm-only repos run on older Pythons.
 
         try:
-            project = tomllib.loads(pyproject.read_text(encoding="utf-8")).get("project", {})
+            project = tomllib.loads(read_text(pyproject)).get("project", {})
         except tomllib.TOMLDecodeError:
             raise Unparseable("pyproject.toml: unparseable (TOMLDecodeError)") from None
+        if not isinstance(project, dict):
+            raise Unparseable("pyproject.toml: [project] is not a table")
         if isinstance(project.get("version"), str):
             return str(project.get("name") or ""), project["version"], "pyproject.toml"
     setup = root / "setup.py"
     if setup.is_file():
-        keywords = setup_call_keywords(setup.read_text(encoding="utf-8"))
+        keywords = setup_call_keywords(read_text(setup))
         if "version" in keywords:
             return keywords.get("name", ""), keywords["version"], "setup.py"
     return None
@@ -118,20 +140,32 @@ def package_bins(root: Path, name: str) -> set[str]:
 
 
 def strip_fences(text: str) -> str:
-    return re.sub(r"^(```|~~~).*?^\1[^\n]*$", "", text, flags=re.M | re.S)
+    """Drop fenced blocks; a fence closes only on the same character, at least as long."""
+    kept, fence = [], None
+    for line in text.splitlines():
+        marker = re.match(r"^\s{0,3}(`{3,}|~{3,})", line)
+        if fence is None and marker:
+            fence = marker.group(1)
+        elif fence is not None and marker and marker.group(1)[0] == fence[0] and len(marker.group(1)) >= len(fence):
+            fence = None
+        elif fence is None:
+            kept.append(line)
+    return "\n".join(kept)
 
 
 def changelog_findings(root: Path, name: str, version: str) -> tuple[list[str], list[str]]:
     path = root / "CHANGELOG.md"
     if not path.is_file():
         return [], ["CHANGELOG.md: absent (skipped)"]
-    headings = re.findall(r"^#{2,3}\s+(.*)$", strip_fences(path.read_text(encoding="utf-8")), re.M)
+    headings = re.findall(r"^(#{2,3})\s+(.*)$", strip_fences(read_text(path)), re.M)
     prefix = rf"(?:version\s+|{re.escape(name)}@)?" if name else r"(?:version\s+)?"
+    releases = [(len(h), m.group(1)) for h, text in headings if (m := re.match(rf"\[?{prefix}v?({SEMVER})\]?", text, re.I))]
+    level = releases[0][0] if releases else 2
     entries = []
-    for heading in headings:
-        if re.match(r"\[?unreleased\]?", heading, re.I):
+    for hashes, heading in headings:
+        if len(hashes) == level and UNRELEASED.match(heading):
             entries.append(("unreleased", None))
-        elif match := re.match(rf"\[?{prefix}v?({SEMVER})\]?", heading, re.I):
+        elif len(hashes) == level and (match := re.match(rf"\[?{prefix}v?({SEMVER})\]?", heading, re.I)):
             entries.append(("release", match.group(1)))
     unreleased = [i for i, (kind, _) in enumerate(entries) if kind == "unreleased"]
     released = [v for kind, v in entries if kind == "release"]
@@ -191,7 +225,7 @@ def readme_findings(root: Path, name: str, version: str) -> tuple[list[str], lis
     path = root / "README.md"
     if not path.is_file() or not name:
         return [], ["README.md: skipped (absent or unnamed package)"]
-    text = path.read_text(encoding="utf-8")
+    text = read_text(path)
     errors = []
     pins = set(re.findall(rf"(?<![\w@/.-]){re.escape(name)}@({SEMVER})", text))
     for pin in sorted(pins - {version}):

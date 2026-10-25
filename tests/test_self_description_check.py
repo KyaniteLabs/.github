@@ -155,3 +155,46 @@ def test_duplicate_mismatches_are_reported_once(tmp_path, capsys):
     write(tmp_path, "README.md", "npm install tool\nnpm install tool\n")
     assert sdc.main([str(tmp_path)]) == 1
     assert capsys.readouterr().err.count("README.md installs 'tool'") == 1
+
+
+def test_install_commands_never_cross_lines(tmp_path, capsys):
+    write(tmp_path, "package.json", {"name": "@org/tool", "version": "1.0.0"})
+    write(tmp_path, "README.md", "```\nnpm install\ntool init\n```\n")
+    assert sdc.main([str(tmp_path)]) == 0
+    write(tmp_path, "README.md", "```\nnpm install\nnpx tool\n```\n")
+    assert sdc.main([str(tmp_path)]) == 1
+    assert "README.md installs 'tool'" in capsys.readouterr().err
+
+
+def test_only_setuptools_setup_calls_count(tmp_path):
+    write(tmp_path, "setup.py", 'foo.setup(version="9.9.9")\nimport setuptools\nsetuptools.setup(name="pkg", version="1.0.0")\n')
+    assert sdc.package_source(tmp_path) == ("pkg", "1.0.0", "setup.py")
+
+
+def test_unreleased_subsections_are_not_sections(repo):
+    write(repo, "CHANGELOG.md", "## [Unreleased] — next train\n### Unreleased fixes\n## [1.2.3]\n")
+    assert sdc.main([str(repo)]) == 0
+
+
+@pytest.mark.parametrize("rel", ["CHANGELOG.md", "README.md"])
+def test_invalid_utf8_is_a_mismatch_not_a_traceback(repo, capsys, rel):
+    (repo / rel).write_bytes(b"\xff\xfe broken")
+    assert sdc.main([str(repo)]) == 1
+    assert "unreadable" in capsys.readouterr().err
+
+
+def test_project_must_be_a_table(tmp_path, capsys):
+    write(tmp_path, "pyproject.toml", 'project = "x"\n')
+    assert sdc.main([str(tmp_path)]) == 1
+    assert "[project] is not a table" in capsys.readouterr().err
+
+
+def test_four_part_versions_are_not_semver(repo):
+    write(repo, "CHANGELOG.md", "## 1.2.3.4\n## [1.2.3]\n")
+    write(repo, "README.md", "tool@1.2.3.4 is not a pin of @org/tool\n")
+    assert sdc.main([str(repo)]) == 0
+
+
+def test_nested_fences_hide_their_headings(repo):
+    write(repo, "CHANGELOG.md", "## [1.2.3]\n\n````md\n```\n## Unreleased\n```\n## [9.9.9]\n````\n")
+    assert sdc.main([str(repo)]) == 0
