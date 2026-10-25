@@ -20,3 +20,18 @@ runs:
       env:
         CI_PROFILE_PATH: ${{ inputs.profile }}
       run: python3 "$GITHUB_ACTION_PATH/run.py" "$CI_PROFILE_PATH"
+    # Layer 5: the repo must describe itself consistently (manifest version vs
+    # CHANGELOG vs README). The script ships in this same checkout, two levels
+    # above the action directory. Exit 0 = OK, 1 = mismatch (fail), 2 = not
+    # applicable (pass) — repos with no version-bearing surfaces skip cleanly.
+    - name: Layer 5 self-description consistency
+      shell: bash
+      run: |
+        set -uo pipefail
+        rc=0
+        python3 "$GITHUB_ACTION_PATH/../../scripts/self_description_check.py" . || rc=$?
+        if [ "$rc" -eq 2 ]; then
+          echo "gate evidence: self-description check not applicable here"
+        elif [ "$rc" -ne 0 ]; then
+          exit "$rc"
+        fi
