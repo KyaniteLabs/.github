@@ -28,8 +28,12 @@ runs:
       shell: bash
       run: |
         set -uo pipefail
+        script="$GITHUB_ACTION_PATH/../../scripts/self_description_check.py"
+        # Fail closed if the script is ever moved: rc 2 means "not applicable"
+        # and would otherwise mask a missing script as a clean pass.
+        [ -f "$script" ] || { echo "self-description check script missing" >&2; exit 1; }
         rc=0
-        python3 "$GITHUB_ACTION_PATH/../../scripts/self_description_check.py" . || rc=$?
+        python3 "$script" . || rc=$?
         if [ "$rc" -eq 2 ]; then
           echo "gate evidence: self-description check not applicable here"
         elif [ "$rc" -ne 0 ]; then

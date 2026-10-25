@@ -176,7 +176,7 @@ These come from the cohort rollouts across 25 repositories, with independent rev
 - README `name@x.y.z` pins;
 - README install commands that name a near-miss of the package. Running a declared bin with `npx <bin>` after install is allowed.
 
-Each passing check prints `gate evidence:` lines. Exit codes: 0 consistent; 1 mismatch, including an unparseable or wrongly shaped file; 2 not applicable, because there is no version in `package.json`, `pyproject.toml` `[project]` or `setup()`. Poetry `[tool.poetry]` and dynamic versions are not read yet, so don't adopt the check until the repository has a supported version source. Run it as a `verify` phase step: `python3 <contract>/scripts/self_description_check.py`. Creating tags and releases remains a separately authorized publishing step; this check only proves that what the repository says about itself is consistent.
+Each passing check prints `gate evidence:` lines. Exit codes: 0 consistent; 1 mismatch, including an unparseable or wrongly shaped file; 2 not applicable, because there is no version in `package.json`, `pyproject.toml` `[project]` or `setup()`. Poetry `[tool.poetry]` and dynamic versions are not read yet, so don't adopt the check until the repository has a supported version source. Runs automatically at the end of every `ci/required` via the shared `ci-profile` action (pinned `.ci-contract` checkout); manual invocation: `python3 <contract>/scripts/self_description_check.py`. Creating tags and releases remains a separately authorized publishing step; this check only proves that what the repository says about itself is consistent.
 
 ## Rollout and rollback
 
