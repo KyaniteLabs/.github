@@ -1,78 +1,13 @@
 {
   "version": 1,
-  "test_globs": [
-    "tests/test_*.py"
-  ],
-  "dependency_files": [
-    ".ci/profile.json"
-  ],
-  "junit_reports": [
-    ".ci-results/tests.xml"
-  ],
+  "test_globs": ["tests/test_*.py"],
+  "dependency_files": [".ci/profile.json"],
+  "junit_reports": [".ci-results/tests.xml"],
   "steps": [
-    {
-      "name": "Install isolated test tools",
-      "phase": "install",
-      "argv": [
-        "bash",
-        "-euo",
-        "pipefail",
-        "-c",
-        "apt-get update -qq && apt-get install -y -qq python3-venv && python3 -m venv .venv && .venv/bin/pip install --quiet pytest==9.1.1 ruff==0.15.7"
-      ]
-    },
-    {
-      "name": "Lint CI contract",
-      "phase": "verify",
-      "argv": [
-        ".venv/bin/ruff",
-        "check",
-        "actions/ci-profile",
-        "scripts/ci_adoption_audit.py",
-        "scripts/ci_experiment.py",
-        "scripts/ci_experiment_evidence.py",
-        "tests/test_ci_profile.py",
-        "tests/test_ci_adoption_audit.py",
-        "tests/test_ci_experiment.py",
-        "scripts/self_description_check.py",
-        "tests/test_self_description_check.py"
-      ]
-    },
-    {
-      "name": "Compile shipped Python tools",
-      "phase": "build",
-      "argv": [
-        "python3",
-        "-m",
-        "compileall",
-        "-q",
-        "scripts",
-        "actions/ci-profile"
-      ]
-    },
-    {
-      "name": "Run real tests and negative fixtures",
-      "phase": "test",
-      "argv": [
-        ".venv/bin/python",
-        "-m",
-        "pytest",
-        "tests",
-        "-q",
-        "--tb=short",
-        "--junitxml=.ci-results/tests.xml"
-      ]
-    },
-    {
-      "name": "Exercise shipped commands",
-      "phase": "acceptance",
-      "argv": [
-        "bash",
-        "-euo",
-        "pipefail",
-        "-c",
-        "python3 scripts/check-agent-parity.py --help && python3 scripts/ci_adoption_audit.py --help && python3 scripts/ci_experiment.py --help && python3 scripts/self_description_check.py --help"
-      ]
-    }
+    {"name": "Install isolated test tools", "phase": "install", "argv": ["bash", "-euo", "pipefail", "-c", "apt-get update -qq && apt-get install -y -qq python3-venv && python3 -m venv .venv && .venv/bin/pip install --quiet pytest==9.1.1 ruff==0.15.7"]},
+    {"name": "Lint CI contract", "phase": "verify", "argv": [".venv/bin/ruff", "check", "actions/ci-profile", "scripts/ci_adoption_audit.py", "scripts/ci_experiment.py", "scripts/ci_experiment_evidence.py", "tests/test_ci_profile.py", "tests/test_ci_adoption_audit.py", "tests/test_ci_experiment.py", "scripts/self_description_check.py", "tests/test_self_description_check.py"]},
+    {"name": "Compile shipped Python tools", "phase": "build", "argv": ["python3", "-m", "compileall", "-q", "scripts", "actions/ci-profile"]},
+    {"name": "Run real tests and negative fixtures", "phase": "test", "argv": [".venv/bin/python", "-m", "pytest", "tests", "-q", "--tb=short", "--junitxml=.ci-results/tests.xml"]},
+    {"name": "Exercise shipped commands", "phase": "acceptance", "argv": ["bash", "-euo", "pipefail", "-c", "python3 scripts/check-agent-parity.py --help && python3 scripts/ci_adoption_audit.py --help && python3 scripts/ci_experiment.py --help && python3 scripts/self_description_check.py --help"]}
   ]
 }
