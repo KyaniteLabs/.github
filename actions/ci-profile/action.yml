@@ -39,3 +39,19 @@ runs:
         elif [ "$rc" -ne 0 ]; then
           exit "$rc"
         fi
+    # Layer 3: executable docs. README blocks tagged ```bash readme-test run
+    # after the project contract, so they see the built checkout. Same exit
+    # contract as Layer 5: 2 = not applicable (no tagged blocks) passes.
+    - name: Layer 3 executable README blocks
+      shell: bash
+      run: |
+        set -uo pipefail
+        script="$GITHUB_ACTION_PATH/../../scripts/readme_exec.py"
+        [ -f "$script" ] || { echo "readme-exec script missing" >&2; exit 1; }
+        rc=0
+        python3 "$script" . || rc=$?
+        if [ "$rc" -eq 2 ]; then
+          echo "gate evidence: executable README check not applicable here"
+        elif [ "$rc" -ne 0 ]; then
+          exit "$rc"
+        fi
