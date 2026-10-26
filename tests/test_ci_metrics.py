@@ -101,10 +101,32 @@ class PagingTests(unittest.TestCase):
         self.assertEqual(len(METRICS.runs("o/r", get, limit=200)), 70)
         self.assertEqual(len(calls), 2)
 
-    def test_stops_at_since(self):
+    def test_filters_runs_before_since_without_truncating(self):
         old = run(created="2026-09-01T00:00:00Z")
         get = lambda path: {"workflow_runs": [run(), old, run()]}
-        self.assertEqual(len(METRICS.runs("o/r", get, since=datetime(2026, 10, 1, tzinfo=timezone.utc))), 1)
+        self.assertEqual(len(METRICS.runs("o/r", get, since=datetime(2026, 10, 1, tzinfo=timezone.utc))), 2)
+
+    def test_stops_on_a_page_entirely_before_since(self):
+        calls = []
+
+        def get(path):
+            calls.append(path)
+            return {"workflow_runs": [run(created="2026-09-01T00:00:00Z")] * METRICS.PAGE}
+
+        self.assertEqual(METRICS.runs("o/r", get, since=datetime(2026, 10, 1, tzinfo=timezone.utc)), [])
+        self.assertEqual(len(calls), 1)
+
+    def test_a_run_repeated_across_pages_is_counted_once(self):
+        items = [dict(run(sha=f"{i:040x}"), id=i) for i in range(METRICS.PAGE + 10)]
+
+        def get(path):
+            page = int(path.rsplit("page=", 1)[1])
+            start = (page - 1) * METRICS.PAGE - (1 if page > 1 else 0)  # a new run shifted page 2 by one
+            return {"workflow_runs": items[start: start + METRICS.PAGE]}
+
+        ids = [r["id"] for r in METRICS.runs("o/r", get)]
+        self.assertEqual(len(ids), len(set(ids)))
+        self.assertEqual(len(ids), len(items))
 
     def test_malformed_response_is_a_failed_lookup(self):
         with self.assertRaises(METRICS.LookupFailed):

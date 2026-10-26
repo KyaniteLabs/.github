@@ -60,22 +60,34 @@ def timestamp(value):
 
 
 def runs(repo, get=fetch, limit=200, since=None):
-    """Newest-first runs, stopping at `limit` or at the first run created before `since`."""
+    """Up to `limit` runs created at or after `since`.
+
+    Older runs are filtered rather than ending the scan, so an out-of-order
+    page cannot truncate the sample; paging stops at a short page or at a
+    page with no run inside the window. Run ids are deduplicated because a
+    run created mid-scan shifts later pages by one.
+    """
     repo = repository(repo)
-    collected, page = [], 1
+    collected, seen, page = [], set(), 1
     while len(collected) < limit:
         body = get(f"repos/{repo}/actions/runs?limit={PAGE}&page={page}")
         batch = body.get("workflow_runs") if isinstance(body, dict) else None
         if not isinstance(batch, list):
             raise LookupFailed(f"{repo}: runs response has no workflow_runs list")
+        in_window = 0
         for run in batch:
             created = timestamp(run.get("created"))
             if since and created and created < since:
-                return collected
+                continue
+            in_window += 1
+            if run.get("id") is not None:
+                if run["id"] in seen:
+                    continue
+                seen.add(run["id"])
             collected.append(run)
             if len(collected) == limit:
                 return collected
-        if len(batch) < PAGE:
+        if len(batch) < PAGE or not in_window:
             return collected
         page += 1
     return collected
