@@ -2,7 +2,9 @@
 
 import importlib.util
 import io
+import os
 import tempfile
+import time
 import unittest
 from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
@@ -24,6 +26,20 @@ def repo(readme=None, **files):
         path.write_text(content)
         path.chmod(0o755)
     return root
+
+
+def alive(pid):
+    """True while pid runs. A killed orphan can linger as a zombie when the
+    container's PID 1 does not reap it; a zombie no longer runs."""
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    stat = Path(f"/proc/{pid}/stat")
+    try:
+        return stat.read_text().rsplit(")", 1)[1].split()[0] != "Z"
+    except (OSError, IndexError):
+        return True
 
 
 def main(root):
@@ -105,11 +121,8 @@ class RunTests(unittest.TestCase):
         with redirect_stdout(io.StringIO()), redirect_stderr(io.StringIO()):
             self.assertEqual(EXEC.main([str(root), "--timeout", "1"]), 1)
         pid = int((root / "child.pid").read_text())
-        import os, time
-        for _ in range(20):
-            try:
-                os.kill(pid, 0)
-            except ProcessLookupError:
+        for _ in range(40):
+            if not alive(pid):
                 break
             time.sleep(0.05)
         else:
