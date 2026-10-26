@@ -117,6 +117,9 @@ def compare(base: dict, head: dict) -> list[str]:
         lines.append(f"tests {bt.get('total', '-')} -> {ht['total']} ({delta:+d})" if bt else f"tests - -> {ht['total']} (no base)")
         if bt and delta < 0:
             regressions.append(f"test count fell by {-delta}")
+    elif bt:
+        lines.append(f"tests {bt.get('total', '-')} -> - (no test report)")
+        regressions.append("test report missing; main had one")
     bc, hc = base.get("coverage_lines_pct"), head.get("coverage_lines_pct")
     if hc is not None:
         if bc is None:

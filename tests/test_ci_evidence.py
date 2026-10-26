@@ -107,6 +107,10 @@ class CompareTests(unittest.TestCase):
         head = {"tests": {"total": 12}, "coverage_lines_pct": 80.0, "artifacts": {"pkg.tgz": 1040}}
         self.assertFalse([l for l in EVIDENCE.compare(self.BASE, head) if l.startswith("evidence regression:")])
 
+    def test_losing_the_test_report_is_a_regression(self):
+        lines = EVIDENCE.compare(self.BASE, {"tests": None})
+        self.assertIn("evidence regression: test report missing; main had one", lines)
+
     def test_compare_is_advisory_even_with_regressions(self):
         root = checkout(**{"base.json": json.dumps(self.BASE), "head.json": json.dumps({"tests": {"total": 1}})})
         code, out, _ = run("compare", str(root / "base.json"), str(root / "head.json"))

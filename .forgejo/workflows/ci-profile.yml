@@ -90,7 +90,7 @@ jobs:
           proto=${SERVER%%://*}; host=${SERVER#*://}
           url="${proto}://ci:${TOKEN}@${host}/${REPO}.git"
           quiet() { "$@" 2>&1 | sed "s/${TOKEN}/***/g"; return "${PIPESTATUS[0]}"; }
-          head=$(git ls-remote "$url" "refs/heads/$DEFAULT_BRANCH" | cut -f1)
+          head=$(git ls-remote "$url" "refs/heads/$DEFAULT_BRANCH" 2> >(sed "s/${TOKEN}/***/g" >&2) | cut -f1)
           if [ "$head" != "$SHA" ]; then
             echo "evidence: $SHA is no longer the head of $DEFAULT_BRANCH ($head); not publishing stale evidence"
             exit 0
