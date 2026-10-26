@@ -15,6 +15,14 @@ as a developer's activated shell would have them. A block passes when it exits
 The expectation lines are shell comments, so a person copying the block runs
 exactly what CI ran.
 
+Only whole-word tags after a shell language match (`bash readme-test`);
+other spellings are not run, so check the evidence lines after tagging.
+
+Trust: a tagged block is CI configuration written in Markdown. It runs with
+the job's environment, exactly like the project-owned profile steps, and a
+pull request can change either one. Review README edits to tagged blocks as
+CI changes, and never expose secrets to jobs that run untrusted pull requests.
+
 Exit codes: 0 every tagged block passed, 1 a block failed (or the README is
 unreadable), 2 not applicable (no README or no tagged block). Evidence lines
 name every block, so a pass is visible in CI logs.
@@ -25,6 +33,7 @@ from __future__ import annotations
 import argparse
 import os
 import re
+import signal
 import subprocess
 import sys
 from pathlib import Path
@@ -63,17 +72,24 @@ def environment(root: Path) -> dict[str, str]:
 
 def run_block(root: Path, body: str, timeout: int) -> tuple[bool, str]:
     expectations = [match.group(1).strip() for line in body.splitlines() if (match := EXPECT.match(line))]
+    if any(not text for text in expectations):
+        return False, "empty '# expect:' line (it would match any output)"
+    # A new session lets a timeout kill the whole process group, including
+    # background children the block started.
+    process = subprocess.Popen(
+        ["bash", "-euo", "pipefail", "-c", body], cwd=root, env=environment(root),
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, start_new_session=True,
+    )
     try:
-        result = subprocess.run(
-            ["bash", "-euo", "pipefail", "-c", body], cwd=root, env=environment(root),
-            capture_output=True, text=True, timeout=timeout, check=False,
-        )
+        stdout, stderr = process.communicate(timeout=timeout)
     except subprocess.TimeoutExpired:
+        os.killpg(process.pid, signal.SIGKILL)
+        process.communicate()
         return False, f"timed out after {timeout}s"
-    if result.returncode:
-        detail = (result.stderr or result.stdout).strip().splitlines()[-5:]
-        return False, f"exit {result.returncode}: " + " | ".join(detail)
-    missing = [text for text in expectations if text not in result.stdout]
+    if process.returncode:
+        detail = (stderr or stdout).strip().splitlines()[-5:]
+        return False, f"exit {process.returncode}: " + " | ".join(detail)
+    missing = [text for text in expectations if text not in stdout]
     if missing:
         return False, "expected output not found: " + "; ".join(repr(text) for text in missing)
     return True, f"{len(expectations)} expectation(s) met"

@@ -95,6 +95,26 @@ class RunTests(unittest.TestCase):
         root = repo("```bash readme-test\ncat marker.txt\n# expect: here\n```\n", **{"marker.txt": "here\n"})
         self.assertEqual(main(root)[0], 0)
 
+    def test_empty_expectation_is_rejected(self):
+        code, _, err = main(repo("```bash readme-test\ntrue\n# expect:\n```\n"))
+        self.assertEqual(code, 1)
+        self.assertIn("empty '# expect:' line", err)
+
+    def test_timeout_kills_background_children(self):
+        root = repo("```bash readme-test\nsleep 30 &\necho $! > child.pid\nwait\n```\n")
+        with redirect_stdout(io.StringIO()), redirect_stderr(io.StringIO()):
+            self.assertEqual(EXEC.main([str(root), "--timeout", "1"]), 1)
+        pid = int((root / "child.pid").read_text())
+        import os, time
+        for _ in range(20):
+            try:
+                os.kill(pid, 0)
+            except ProcessLookupError:
+                break
+            time.sleep(0.05)
+        else:
+            self.fail("background child survived the timeout")
+
     def test_timeout_fails(self):
         root = repo("```bash readme-test\nsleep 5\n```\n")
         err = io.StringIO()
