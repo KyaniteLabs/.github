@@ -65,7 +65,10 @@ jobs:
   publish-evidence:
     name: ci/evidence-publish
     needs: required
-    if: ${{ inputs.publish_evidence && github.event_name == 'push' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
+    # Inside a reusable workflow Forgejo reports event_name as workflow_call,
+    # so gate on a branch ref (never a pull request) and let the script below
+    # confirm this is the head of the default branch.
+    if: ${{ inputs.publish_evidence && startsWith(github.ref, 'refs/heads/') }}
     runs-on: ${{ inputs.runner }}
     permissions:
       contents: write
@@ -82,6 +85,7 @@ jobs:
           SERVER: ${{ github.server_url }}
           REPO: ${{ github.repository }}
           SHA: ${{ github.sha }}
+          REF: ${{ github.ref }}
           DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
         run: |
           set -euo pipefail
@@ -90,6 +94,13 @@ jobs:
           proto=${SERVER%%://*}; host=${SERVER#*://}
           url="${proto}://ci:${TOKEN}@${host}/${REPO}.git"
           quiet() { "$@" 2>&1 | sed "s/${TOKEN}/***/g"; return "${PIPESTATUS[0]}"; }
+          if [ -z "$DEFAULT_BRANCH" ]; then
+            DEFAULT_BRANCH=$(git ls-remote --symref "$url" HEAD 2> >(sed "s/${TOKEN}/***/g" >&2) | awk '/^ref:/ {sub("refs/heads/", "", $2); print $2}')
+          fi
+          if [ -z "$DEFAULT_BRANCH" ] || [ "$REF" != "refs/heads/$DEFAULT_BRANCH" ]; then
+            echo "evidence: $REF is not the default branch (${DEFAULT_BRANCH:-unknown}); not publishing"
+            exit 0
+          fi
           head=$(git ls-remote "$url" "refs/heads/$DEFAULT_BRANCH" 2> >(sed "s/${TOKEN}/***/g" >&2) | cut -f1)
           if [ "$head" != "$SHA" ]; then
             echo "evidence: $SHA is no longer the head of $DEFAULT_BRANCH ($head); not publishing stale evidence"
