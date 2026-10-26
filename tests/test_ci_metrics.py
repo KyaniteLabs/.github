@@ -79,6 +79,19 @@ class SummaryTests(unittest.TestCase):
         self.assertEqual(report["cross_event_duplicates"], 1)
 
 
+class SupersededTests(unittest.TestCase):
+    def test_cancelled_run_replaced_by_a_later_run_on_the_same_ref(self):
+        older = dict(run(created="2026-10-25T10:00:00Z", status="cancelled"), prettyref="main")
+        newer = dict(run(created="2026-10-25T10:01:00Z", sha="b" * 40), prettyref="main")
+        stranded = dict(run(created="2026-10-25T10:02:00Z", status="cancelled", sha="c" * 40), prettyref="#7")
+        other_workflow = dict(run(workflow="lint.yml", created="2026-10-25T10:03:00Z"), prettyref="#7")
+        self.assertEqual(METRICS.summarize("o/r", [older, newer, stranded, other_workflow])["superseded"], 1)
+
+    def test_latest_cancelled_run_is_not_superseded(self):
+        only = dict(run(status="cancelled"), prettyref="main")
+        self.assertEqual(METRICS.summarize("o/r", [only])["superseded"], 0)
+
+
 class PagingTests(unittest.TestCase):
     def pages(self, total):
         items = [run(sha=f"{i:040x}") for i in range(total)]
@@ -145,6 +158,7 @@ class MainTests(unittest.TestCase):
             code = METRICS.main(["o/good", "o/bad"], get=get, now=NOW)
         self.assertEqual(code, 1)
         self.assertIn("| o/good | ci.yml | push | 1 | 0 | 30s | 30s | 2m00s | 2m00s |", out.getvalue())
+        self.assertIn("| success 1 | 0/0 |", out.getvalue())
         self.assertIn("| o/bad | - | - | - | - | unavailable: lookup unavailable", out.getvalue())
 
     def test_rejects_path_traversal(self):

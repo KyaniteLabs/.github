@@ -119,6 +119,20 @@ def summarize(repo, items):
         if run.get("commit_sha"):
             builds[(key[0], run["commit_sha"])].append(key[1])
     duplicated = {build: events for build, events in builds.items() if len(events) > 1}
+    # A cancelled run is superseded when a later run of the same workflow on
+    # the same ref exists: harmless replacement, not a failure to investigate.
+    latest = {}
+    for run in items:
+        key = (run.get("workflow_id"), run.get("prettyref"))
+        created = timestamp(run.get("created"))
+        if key[1] and created and (key not in latest or created > latest[key]):
+            latest[key] = created
+    superseded = sum(
+        1 for run in items
+        if run.get("status") == "cancelled" and run.get("prettyref")
+        and (created := timestamp(run.get("created")))
+        and latest.get((run.get("workflow_id"), run.get("prettyref")), created) > created
+    )
     rows = []
     for (workflow, event), group in sorted(groups.items()):
         rows.append({
@@ -135,6 +149,7 @@ def summarize(repo, items):
         "repository": repo,
         "runs": len(items),
         "outcomes": dict(outcomes),
+        "superseded": superseded,
         "rows": rows,
         "duplicate_builds": len(duplicated),
         "extra_runs": sum(len(events) - 1 for events in duplicated.values()),
@@ -165,15 +180,16 @@ def markdown(reports, generated):
                 f"| {seconds(row['runtime_p50'])} | {seconds(row['runtime_p95'])} |"
             )
     lines += ["", "## Duplicate runs (same workflow, same commit)", "",
-              "| Repository | Runs | Duplicated commits | Extra runs | Across events | Outcomes |",
-              "|---|---|---|---|---|---|"]
+              "| Repository | Runs | Duplicated commits | Extra runs | Across events | Outcomes | Cancelled but superseded |",
+              "|---|---|---|---|---|---|---|"]
     for report in reports:
         if "error" in report:
             continue
         outcomes = ", ".join(f"{k} {v}" for k, v in sorted(report["outcomes"].items()))
         lines.append(
             f"| {report['repository']} | {report['runs']} | {report['duplicate_builds']} "
-            f"| {report['extra_runs']} | {report['cross_event_duplicates']} | {outcomes} |"
+            f"| {report['extra_runs']} | {report['cross_event_duplicates']} | {outcomes} "
+            f"| {report['superseded']}/{report['outcomes'].get('cancelled', 0)} |"
         )
     return "\n".join(lines) + "\n"
 
