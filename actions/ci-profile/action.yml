@@ -55,3 +55,24 @@ runs:
         elif [ "$rc" -ne 0 ]; then
           exit "$rc"
         fi
+    # Layer 3: before/after evidence. Summarize this run into
+    # .ci-results/evidence.json (uploaded with the other results), then compare
+    # it against the latest main-branch evidence on the ci-evidence branch.
+    # Advisory: deltas and regressions are printed, never fail the job.
+    - name: Layer 3 before/after evidence
+      shell: bash
+      env:
+        CI_PROFILE_PATH: ${{ inputs.profile }}
+        EVIDENCE_TOKEN: ${{ github.token }}
+        EVIDENCE_API: ${{ github.api_url }}
+        EVIDENCE_REPO: ${{ github.repository }}
+      run: |
+        set -uo pipefail
+        script="$GITHUB_ACTION_PATH/../../scripts/ci_evidence.py"
+        [ -f "$script" ] || { echo "evidence script missing" >&2; exit 1; }
+        python3 "$script" collect . --profile "$CI_PROFILE_PATH" || exit $?
+        base="$(mktemp)"
+        code=$(curl -s -o "$base" -w '%{http_code}' -H "Authorization: token $EVIDENCE_TOKEN" \
+          "$EVIDENCE_API/repos/$EVIDENCE_REPO/raw/evidence/main.json?ref=ci-evidence" || echo 000)
+        [ "$code" = 200 ] || rm -f "$base"
+        python3 "$script" compare "$base" .ci-results/evidence.json
