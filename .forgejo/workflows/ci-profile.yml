@@ -80,6 +80,8 @@ jobs:
           name: ci-evidence
           path: .ci-results-main
       - name: Publish evidence to the ci-evidence branch
+        # Some runners default to sh, which has no pipefail or PIPESTATUS.
+        shell: bash
         env:
           TOKEN: ${{ github.token }}
           SERVER: ${{ github.server_url }}
