@@ -103,6 +103,11 @@ class CompareTests(unittest.TestCase):
         regressions = [line for line in lines if line.startswith("evidence regression:")]
         self.assertEqual(len(regressions), 3)
 
+    def test_coverage_noise_is_not_a_regression(self):
+        lines = EVIDENCE.compare(self.BASE, {"tests": {"total": 10}, "coverage_lines_pct": 79.96})
+        self.assertFalse([l for l in lines if l.startswith("evidence regression:")])
+        self.assertIn("evidence delta: line coverage 80.0% -> 79.96% (-0.04 pts)", lines)
+
     def test_small_growth_and_more_tests_are_not_regressions(self):
         head = {"tests": {"total": 12}, "coverage_lines_pct": 80.0, "artifacts": {"pkg.tgz": 1040}}
         self.assertFalse([l for l in EVIDENCE.compare(self.BASE, head) if l.startswith("evidence regression:")])

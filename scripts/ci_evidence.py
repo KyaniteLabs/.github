@@ -12,9 +12,10 @@ and writes ROOT/.ci-results/evidence.json:
     a version bump compares like with like.
 
 `compare BASE HEAD` prints one `evidence delta:` line per measure and an
-`evidence regression:` line for each advisory regression (fewer tests, lower
-coverage, an artifact more than 5% larger). Comparison is advisory: it exits
-0 even with regressions, and only says so when no baseline exists yet.
+`evidence regression:` line for each advisory regression (fewer tests, a
+missing test report, line coverage down more than 0.1 points, an artifact
+more than 5% larger). Comparison is advisory: it exits 0 even with
+regressions, and only says so when no baseline exists yet.
 Main-branch runs publish their evidence to the `ci-evidence` branch; PR runs
 compare against it.
 """
@@ -30,6 +31,8 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 
 SIZE_GROWTH_LIMIT = 0.05
+# Coverage moves by a few hundredths between identical runs; flag real drops only.
+COVERAGE_TOLERANCE_PTS = 0.1
 VERSION = re.compile(r"[-_]?v?\d+\.\d+\.\d+(?:-(?:alpha|beta|rc|dev|pre)\.?\d*)?(?=[-_.]|$)")
 
 
@@ -126,7 +129,7 @@ def compare(base: dict, head: dict) -> list[str]:
             lines.append(f"line coverage - -> {hc}% (no base)")
         else:
             lines.append(f"line coverage {bc}% -> {hc}% ({hc - bc:+.2f} pts)")
-            if hc < bc:
+            if bc - hc > COVERAGE_TOLERANCE_PTS:
                 regressions.append(f"line coverage fell {bc}% -> {hc}%")
     for phase, seconds in sorted((head.get("phases") or {}).items()):
         before = (base.get("phases") or {}).get(phase)
