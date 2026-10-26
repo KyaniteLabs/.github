@@ -14,12 +14,18 @@ on:
       artifact_paths:
         type: string
         default: .ci-results/
+      publish_evidence:
+        description: Publish main-branch evidence to the ci-evidence branch (Layer 3 before/after baseline)
+        type: boolean
+        default: false
 permissions:
   contents: read
 jobs:
   required:
     name: ci/required
     runs-on: ${{ inputs.runner }}
+    permissions:
+      contents: read
     container:
       image: ${{ inputs.image }}
     steps:
@@ -51,3 +57,60 @@ jobs:
           path: ${{ inputs.artifact_paths }}
           if-no-files-found: error
           retention-days: 14
+  # Layer 3 baseline: main-branch runs publish evidence.json to the ci-evidence
+  # branch so pull requests can print before/after deltas. Only this job asks
+  # for write access. Note: Forgejo 15 does not enforce job token permissions
+  # (a contents: read job can push), so the declaration documents intent and
+  # takes effect if enforcement arrives; it is not a boundary today.
+  publish-evidence:
+    name: ci/evidence-publish
+    needs: required
+    if: ${{ inputs.publish_evidence && github.event_name == 'push' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
+    runs-on: ${{ inputs.runner }}
+    permissions:
+      contents: write
+    container:
+      image: ${{ inputs.image }}
+    steps:
+      - uses: https://code.forgejo.org/forgejo/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # v3
+        with:
+          name: ci-evidence
+          path: .ci-results-main
+      - name: Publish evidence to the ci-evidence branch
+        env:
+          TOKEN: ${{ github.token }}
+          SERVER: ${{ github.server_url }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          set -euo pipefail
+          evidence="$GITHUB_WORKSPACE/.ci-results-main/evidence.json"
+          [ -f "$evidence" ] || { echo "evidence.json missing from the ci-evidence artifact" >&2; exit 1; }
+          proto=${SERVER%%://*}; host=${SERVER#*://}
+          url="${proto}://ci:${TOKEN}@${host}/${REPO}.git"
+          quiet() { "$@" 2>&1 | sed "s/${TOKEN}/***/g"; return "${PIPESTATUS[0]}"; }
+          head=$(git ls-remote "$url" "refs/heads/$DEFAULT_BRANCH" 2> >(sed "s/${TOKEN}/***/g" >&2) | cut -f1)
+          if [ "$head" != "$SHA" ]; then
+            echo "evidence: $SHA is no longer the head of $DEFAULT_BRANCH ($head); not publishing stale evidence"
+            exit 0
+          fi
+          for attempt in 1 2 3; do
+            work=$(mktemp -d); cd "$work"
+            git init -q; git config user.name ci-evidence; git config user.email ci-evidence@invalid
+            if quiet git fetch -q --depth=1 "$url" ci-evidence; then git checkout -q -B ci-evidence FETCH_HEAD; else git checkout -q --orphan ci-evidence; fi
+            mkdir -p evidence
+            cp "$evidence" evidence/main.json
+            python3 -c 'import json,sys; print(json.dumps(json.load(open(sys.argv[1])), sort_keys=True))' "$evidence" >> evidence/history.jsonl
+            tail -n 500 evidence/history.jsonl > evidence/history.tmp && mv evidence/history.tmp evidence/history.jsonl
+            git add evidence
+            git commit -qm "evidence: $DEFAULT_BRANCH ${SHA:0:12}"
+            if quiet git push -q "$url" HEAD:refs/heads/ci-evidence; then
+              echo "evidence: published for ${SHA:0:12} (attempt $attempt)"
+              exit 0
+            fi
+            echo "evidence: push rejected (attempt $attempt); refetching"
+            cd /; sleep $((attempt * 3))
+          done
+          echo "evidence: could not publish after 3 attempts" >&2
+          exit 1
