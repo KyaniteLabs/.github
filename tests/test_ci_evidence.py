@@ -123,6 +123,21 @@ class CompareTests(unittest.TestCase):
         self.assertIn("evidence regression: large files rose 3 -> 4", lines)
         self.assertNotIn("evidence regression: complex Python functions rose 5 -> 4", lines)
 
+    def test_a_failed_measurement_never_fails_collection(self):
+        root = self.full_checkout()
+        broken = root / "broken_signals.py"
+        broken.write_text("raise MemoryError('parser stack overflowed')\n")
+        spec_from = EVIDENCE.importlib.util.spec_from_file_location
+        EVIDENCE.importlib.util.spec_from_file_location = lambda name, path: spec_from(name, broken)
+        try:
+            self.assertIsNone(EVIDENCE.structure(root))
+        finally:
+            EVIDENCE.importlib.util.spec_from_file_location = spec_from
+
+    def test_a_lost_measurement_is_reported(self):
+        base = {**self.BASE, "structure": {"duplicated_lines_pct": 4.0, "large_files": 3}}
+        self.assertIn("evidence delta: structure signals not measured on this run", EVIDENCE.compare(base, self.BASE))
+
     def test_small_duplication_noise_and_old_baselines_are_not_regressions(self):
         head = {**self.BASE, "structure": {"duplicated_lines_pct": 4.4, "large_files": 3, "python_complex_functions": None}}
         noise = EVIDENCE.compare({**self.BASE, "structure": {"duplicated_lines_pct": 4.0, "large_files": 3}}, head)

@@ -88,11 +88,12 @@ def structure(root: Path) -> dict | None:
     spec = importlib.util.spec_from_file_location("structure_signals", Path(__file__).with_name("structure_signals.py"))
     if spec is None or not Path(spec.origin).is_file():
         return None
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
+    # Advisory: no failure while measuring may fail evidence collection.
     try:
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
         return module.measure(root)
-    except (OSError, ValueError, RecursionError) as exc:
+    except Exception as exc:
         print(f"evidence: structure signals skipped ({exc.__class__.__name__}: {exc})", file=sys.stderr)
         return None
 
@@ -165,6 +166,8 @@ def compare(base: dict, head: dict) -> list[str]:
     for key in sorted(set(base.get("artifacts") or {}) - set(head.get("artifacts") or {})):
         lines.append(f"artifact {key} {human_bytes(base['artifacts'][key])} -> - (gone)")
     bs, hs = base.get("structure") or {}, head.get("structure") or {}
+    if bs and not hs:
+        lines.append("structure signals not measured on this run")
     if hs:
         bd, hd = bs.get("duplicated_lines_pct"), hs.get("duplicated_lines_pct")
         if bd is None:

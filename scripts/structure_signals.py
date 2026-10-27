@@ -12,6 +12,9 @@ walk) and returns:
   * python_complex_functions: how many Python functions exceed
     COMPLEXITY_LIMIT cyclomatic complexity, with the worst few listed.
     Complexity is Python-only; other languages report null rather than a guess.
+    Each def is its own unit: nested defs and lambdas do not add to the
+    enclosing function (lambdas are not scored), while a nested class body
+    does. A file Python cannot parse is still counted for lines.
 
 ci_evidence.py stores the result under `structure` and compares it between a
 pull request and main. Like all evidence, it is advisory.
@@ -61,7 +64,7 @@ def significant(text: str) -> list[str]:
 
 
 def complexity(node: ast.AST) -> int:
-    # Nested functions and lambdas are their own units, so do not descend into them.
+    # Nested defs are scored on their own; lambdas are too small to score.
     score, stack = 1, list(ast.iter_child_nodes(node))
     while stack:
         child = stack.pop()
@@ -82,7 +85,8 @@ def complexity(node: ast.AST) -> int:
 def python_functions(rel: Path, text: str) -> list[tuple[int, str]]:
     try:
         tree = ast.parse(text)
-    except (SyntaxError, ValueError):
+    except (SyntaxError, ValueError, RecursionError, MemoryError):
+        # Pathological or generated sources can exhaust the parser; skip that file only.
         return []
     return [(complexity(node), f"{rel}:{node.lineno} {node.name}")
             for node in ast.walk(tree) if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))]

@@ -1,5 +1,6 @@
 """Structure signals count real duplication, size and Python complexity, and nothing else."""
 
+import ast
 import importlib.util
 import subprocess
 import tempfile
@@ -71,6 +72,15 @@ class MeasureTests(unittest.TestCase):
         result = SIGNALS.measure(root)
         self.assertEqual(result["files"], 1)
         self.assertEqual(result["duplicated_lines_pct"], 0.0)
+
+    def test_a_parser_exhausting_file_is_skipped_not_fatal(self):
+        result = SIGNALS.measure(checkout(**{"deep.py": "x = " + "-" * 100000 + "1\n", "m.py": BRANCHY}))
+        self.assertEqual(result["files"], 2)
+        self.assertEqual(result["python_complex_functions"], 1)
+
+    def test_lambdas_do_not_add_to_the_enclosing_function(self):
+        function = ast.parse("def f(x):\n    g = lambda a: a and x or a\n    return g\n").body[0]
+        self.assertEqual(SIGNALS.complexity(function), 1)
 
     def test_unparseable_python_still_measures_lines(self):
         result = SIGNALS.measure(checkout(**{"bad.py": "def broken(:\n" + BLOCK}))
