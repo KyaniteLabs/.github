@@ -178,6 +178,25 @@ These come from the cohort rollouts across 25 repositories, with independent rev
 
 Each passing check prints `gate evidence:` lines. Exit codes: 0 consistent; 1 mismatch, including an unparseable or wrongly shaped file; 2 not applicable, because there is no version in `package.json`, `pyproject.toml` `[project]` or `setup()`. Poetry `[tool.poetry]` and dynamic versions are not read yet, so don't adopt the check until the repository has a supported version source. Runs automatically at the end of every `ci/required` via the shared `ci-profile` action (pinned `.ci-contract` checkout); manual invocation: `python3 <contract>/scripts/self_description_check.py`. Creating tags and releases remains a separately authorized publishing step; this check only proves that what the repository says about itself is consistent.
 
+## Layer 6: structure signals
+
+`scripts/structure_signals.py` measures the code shape a refactor should move. It reads the tracked source files and skips vendored and generated paths. It reports four measures:
+
+- **Duplicated lines:** the share of significant lines that sit inside a run of six lines repeated somewhere else.
+- **Large files:** files over 800 significant lines.
+- **Complex Python functions:** Python functions over cyclomatic complexity 25. Other languages report `null`, not an estimate.
+- **Worst offenders:** the largest files and the most complex functions.
+
+It uses only the standard library, so it needs no install or network access.
+
+The Layer 3 evidence step stores these measures under `structure` in `evidence.json`. Each pull request prints its change against main. An advisory regression is flagged when:
+
+- duplication rises more than 0.5 points;
+- a large file is added;
+- a complex function is added.
+
+Like all evidence, it never fails the job. To measure locally: `python3 <contract>/scripts/structure_signals.py .`
+
 ## Rollout and rollback
 
 ### Qualified adoption, 2026-10-24

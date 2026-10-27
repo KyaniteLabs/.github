@@ -65,6 +65,15 @@ class CollectTests(unittest.TestCase):
         self.assertEqual(evidence["artifacts"], {"pkg.tgz": 100, "site.tar": 50})
         self.assertIn("tests 4, coverage 81.23, 2 artifact(s)", out)
 
+    def test_collects_structure_signals(self):
+        root = self.full_checkout()
+        (root / "src").mkdir()
+        (root / "src/a.py").write_text("def f(x):\n    return x\n")
+        run("collect", str(root))
+        structure = json.loads((root / ".ci-results/evidence.json").read_text())["structure"]
+        self.assertEqual(structure["files"], 1)
+        self.assertEqual(structure["python_complex_functions"], 0)
+
     def test_absent_sources_are_absent_not_zero(self):
         root = checkout()
         self.assertEqual(run("collect", str(root))[0], 0)
@@ -102,6 +111,41 @@ class CompareTests(unittest.TestCase):
         self.assertIn("evidence delta: artifact old.tar 10 B -> - (gone)", lines)
         regressions = [line for line in lines if line.startswith("evidence regression:")]
         self.assertEqual(len(regressions), 3)
+
+    def test_structure_deltas_and_regressions(self):
+        base = {**self.BASE, "structure": {"duplicated_lines_pct": 4.0, "large_files": 3, "python_complex_functions": 5}}
+        head = {**base, "structure": {"duplicated_lines_pct": 4.6, "large_files": 4, "python_complex_functions": 4}}
+        lines = EVIDENCE.compare(base, head)
+        self.assertIn("evidence delta: duplicated lines 4.0% -> 4.6% (+0.60 pts)", lines)
+        self.assertIn("evidence delta: large files 3 -> 4", lines)
+        self.assertIn("evidence delta: complex Python functions 5 -> 4", lines)
+        self.assertIn("evidence regression: duplicated lines rose 4.0% -> 4.6%", lines)
+        self.assertIn("evidence regression: large files rose 3 -> 4", lines)
+        self.assertNotIn("evidence regression: complex Python functions rose 5 -> 4", lines)
+
+    def test_a_failed_measurement_never_fails_collection(self):
+        root = checkout(**{"src/a.py": "x = 1\n"})
+        broken = root / "broken_signals.py"
+        broken.write_text("raise MemoryError('parser stack overflowed')\n")
+        spec_from = EVIDENCE.importlib.util.spec_from_file_location
+        EVIDENCE.importlib.util.spec_from_file_location = lambda name, path: spec_from(name, broken)
+        try:
+            self.assertIsNone(EVIDENCE.structure(root))
+        finally:
+            EVIDENCE.importlib.util.spec_from_file_location = spec_from
+
+    def test_a_lost_measurement_is_reported(self):
+        base = {**self.BASE, "structure": {"duplicated_lines_pct": 4.0, "large_files": 3}}
+        self.assertIn("evidence delta: structure signals not measured on this run", EVIDENCE.compare(base, self.BASE))
+
+    def test_small_duplication_noise_and_old_baselines_are_not_regressions(self):
+        head = {**self.BASE, "structure": {"duplicated_lines_pct": 4.4, "large_files": 3, "python_complex_functions": None}}
+        noise = EVIDENCE.compare({**self.BASE, "structure": {"duplicated_lines_pct": 4.0, "large_files": 3}}, head)
+        self.assertFalse([line for line in noise if line.startswith("evidence regression:")])
+        old = EVIDENCE.compare(self.BASE, head)
+        self.assertIn("evidence delta: duplicated lines - -> 4.4% (no base)", old)
+        self.assertIn("evidence delta: large files - -> 3", old)
+        self.assertFalse([line for line in old if line.startswith("evidence regression:")])
 
     def test_coverage_noise_is_not_a_regression(self):
         lines = EVIDENCE.compare(self.BASE, {"tests": {"total": 10}, "coverage_lines_pct": 79.96})
