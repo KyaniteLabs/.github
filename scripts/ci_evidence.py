@@ -9,12 +9,15 @@ and writes ROOT/.ci-results/evidence.json:
     coverage/coverage-summary.json or Cobertura coverage.xml);
   * byte sizes of built artifacts (.ci-results/dist/* and top-level
     .ci-results/*.tar, *.tgz, *.whl, *.zip), keyed with versions stripped so
-    a version bump compares like with like.
+    a version bump compares like with like;
+  * Layer 6 structure signals from structure_signals.py (duplication, large
+    files, complex Python functions).
 
 `compare BASE HEAD` prints one `evidence delta:` line per measure and an
 `evidence regression:` line for each advisory regression (fewer tests, a
 missing test report, line coverage down more than 0.1 points, an artifact
-more than 5% larger). Comparison is advisory: it exits 0 even with
+more than 5% larger, duplication up more than 0.5 points, more large files
+or complex functions). Comparison is advisory: it exits 0 even with
 regressions, and only says so when no baseline exists yet.
 Main-branch runs publish their evidence to the `ci-evidence` branch; PR runs
 compare against it.
@@ -24,6 +27,7 @@ from __future__ import annotations
 
 import argparse
 import glob
+import importlib.util
 import json
 import re
 import sys
@@ -33,6 +37,7 @@ from pathlib import Path
 SIZE_GROWTH_LIMIT = 0.05
 # Coverage moves by a few hundredths between identical runs; flag real drops only.
 COVERAGE_TOLERANCE_PTS = 0.1
+DUPLICATION_TOLERANCE_PTS = 0.5
 VERSION = re.compile(r"[-_]?v?\d+\.\d+\.\d+(?:-(?:alpha|beta|rc|dev|pre)\.?\d*)?(?=[-_.]|$)")
 
 
@@ -79,6 +84,19 @@ def artifact_sizes(results: Path) -> dict[str, int]:
     return sizes
 
 
+def structure(root: Path) -> dict | None:
+    spec = importlib.util.spec_from_file_location("structure_signals", Path(__file__).with_name("structure_signals.py"))
+    if spec is None or not Path(spec.origin).is_file():
+        return None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    try:
+        return module.measure(root)
+    except (OSError, ValueError, RecursionError) as exc:
+        print(f"evidence: structure signals skipped ({exc.__class__.__name__}: {exc})", file=sys.stderr)
+        return None
+
+
 def collect(root: Path, profile_name: str) -> dict:
     results = root / ".ci-results"
     receipt_path = results / "ci-profile.json"
@@ -98,6 +116,7 @@ def collect(root: Path, profile_name: str) -> dict:
         "tests": junit_totals(root, profile.get("junit_reports", [])),
         "coverage_lines_pct": coverage_pct(root),
         "artifacts": artifact_sizes(results),
+        "structure": structure(root),
     }
     results.mkdir(parents=True, exist_ok=True)
     (results / "evidence.json").write_text(json.dumps(evidence, indent=2, sort_keys=True) + "\n")
@@ -145,6 +164,22 @@ def compare(base: dict, head: dict) -> list[str]:
             regressions.append(f"artifact {key} grew {growth:.1%} (limit {SIZE_GROWTH_LIMIT:.0%})")
     for key in sorted(set(base.get("artifacts") or {}) - set(head.get("artifacts") or {})):
         lines.append(f"artifact {key} {human_bytes(base['artifacts'][key])} -> - (gone)")
+    bs, hs = base.get("structure") or {}, head.get("structure") or {}
+    if hs:
+        bd, hd = bs.get("duplicated_lines_pct"), hs.get("duplicated_lines_pct")
+        if bd is None:
+            lines.append(f"duplicated lines - -> {hd}% (no base)")
+        else:
+            lines.append(f"duplicated lines {bd}% -> {hd}% ({hd - bd:+.2f} pts)")
+            if hd - bd > DUPLICATION_TOLERANCE_PTS:
+                regressions.append(f"duplicated lines rose {bd}% -> {hd}%")
+        for key, label in (("large_files", "large files"), ("python_complex_functions", "complex Python functions")):
+            before, after = bs.get(key), hs.get(key)
+            if after is None:
+                continue
+            lines.append(f"{label} {before if before is not None else '-'} -> {after}")
+            if before is not None and after > before:
+                regressions.append(f"{label} rose {before} -> {after}")
     return [f"evidence delta: {line}" for line in lines] + [f"evidence regression: {line}" for line in regressions]
 
 
@@ -167,7 +202,8 @@ def main(argv: list[str] | None = None) -> int:
         tests = evidence["tests"] or {}
         print(f"evidence: collected (status {evidence['status']}, tests {tests.get('total', '-')}, "
               f"coverage {evidence['coverage_lines_pct'] if evidence['coverage_lines_pct'] is not None else '-'}, "
-              f"{len(evidence['artifacts'])} artifact(s))")
+              f"{len(evidence['artifacts'])} artifact(s), "
+              f"duplication {(evidence['structure'] or {}).get('duplicated_lines_pct', '-')}%)")
         return 0
     try:
         head = json.loads(Path(args.head).read_text())
