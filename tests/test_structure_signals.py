@@ -6,6 +6,7 @@ import subprocess
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 SPEC = importlib.util.spec_from_file_location(
     "structure_signals", Path(__file__).resolve().parents[1] / "scripts/structure_signals.py",
@@ -81,6 +82,26 @@ class MeasureTests(unittest.TestCase):
     def test_lambdas_do_not_add_to_the_enclosing_function(self):
         function = ast.parse("def f(x):\n    g = lambda a: a and x or a\n    return g\n").body[0]
         self.assertEqual(SIGNALS.complexity(function), 1)
+
+    def test_an_unreadable_file_is_skipped_and_the_rest_still_measured(self):
+        root = checkout(git=True, **{"a.py": BLOCK, "b.py": BLOCK, "locked.py": BRANCHY})
+        real_read = Path.read_text
+
+        def read_text(path, *args, **kwargs):
+            if path.name == "locked.py":
+                raise PermissionError(13, "Permission denied", str(path))
+            return real_read(path, *args, **kwargs)
+
+        # Patched rather than chmod 0, which root (as in CI containers) can still read.
+        with mock.patch.object(Path, "read_text", read_text):
+            result = SIGNALS.measure(root)
+        self.assertEqual(result["files"], 2)
+        self.assertEqual(result["duplicated_lines_pct"], 100.0)
+
+    def test_a_file_that_vanishes_after_listing_is_skipped(self):
+        root = checkout(git=True, **{"a.py": BLOCK, "gone.py": BLOCK})
+        (root / "gone.py").unlink()
+        self.assertEqual(SIGNALS.measure(root)["files"], 1)
 
     def test_unparseable_python_still_measures_lines(self):
         result = SIGNALS.measure(checkout(**{"bad.py": "def broken(:\n" + BLOCK}))

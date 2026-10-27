@@ -14,7 +14,8 @@ walk) and returns:
     Complexity is Python-only; other languages report null rather than a guess.
     Each def is its own unit: nested defs and lambdas do not add to the
     enclosing function (lambdas are not scored), while a nested class body
-    does. A file Python cannot parse is still counted for lines.
+    does. A file Python cannot parse is still counted for lines; a file that
+    cannot be read is skipped, so it never discards the other files' signals.
 
 ci_evidence.py stores the result under `structure` and compares it between a
 pull request and main. Like all evidence, it is advisory.
@@ -54,8 +55,11 @@ def source_files(root: Path) -> list[Path]:
         if rel.suffix not in SOURCE_SUFFIXES or ".min." in rel.name or SKIP_PARTS.intersection(rel.parts):
             continue
         path = root / rel
-        if path.is_file() and not path.is_symlink() and path.stat().st_size <= MAX_FILE_BYTES:
-            files.append(rel)
+        try:
+            if path.is_file() and not path.is_symlink() and path.stat().st_size <= MAX_FILE_BYTES:
+                files.append(rel)
+        except OSError:
+            continue  # vanished or unreadable since listing; measure the rest
     return files
 
 
@@ -98,7 +102,10 @@ def measure(root: Path) -> dict:
     scores: list[tuple[int, str]] = []
     saw_python = False
     for rel in source_files(root):
-        text = (root / rel).read_text(encoding="utf-8", errors="replace")
+        try:
+            text = (root / rel).read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue  # unreadable or vanished; one file must not drop every signal
         lines_by_file[rel] = significant(text)
         if rel.suffix == ".py":
             saw_python = True
