@@ -124,7 +124,7 @@ class CompareTests(unittest.TestCase):
         self.assertNotIn("evidence regression: complex Python functions rose 5 -> 4", lines)
 
     def test_a_failed_measurement_never_fails_collection(self):
-        root = self.full_checkout()
+        root = checkout(**{"src/a.py": "x = 1\n"})
         broken = root / "broken_signals.py"
         broken.write_text("raise MemoryError('parser stack overflowed')\n")
         spec_from = EVIDENCE.importlib.util.spec_from_file_location
