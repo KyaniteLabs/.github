@@ -17,6 +17,7 @@ import subprocess
 import sys
 import tempfile
 from dataclasses import dataclass
+from enum import Enum
 from pathlib import Path
 from typing import Any
 
@@ -24,6 +25,138 @@ START = "<!-- EMPOWER_ORCHESTRATOR:START -->"
 END = "<!-- EMPOWER_ORCHESTRATOR:END -->"
 BRANCH_DEFAULT = "codex/provision-agent-law"
 RULESET_NAME = "Agent Law"
+RESULTS_FILE = "agent-law-provisioner-results.json"
+
+
+# ---------------------------------------------------------------------------
+# Report rows: the persisted outcome of every provisioning step.
+#
+# Each row in agent-law-provisioner-results.json is
+#     {"scope": <owner or owner/repo>, "kind": <RowKind>, "status": "<Outcome>[:<detail>]"}
+# The keys and the stored strings are a published format and must stay
+# byte-compatible. Only BLOCKED rows fail the run (exit code 2).
+# ---------------------------------------------------------------------------
+
+
+class Outcome(str, Enum):
+    """Kind prefix of a stored status string."""
+
+    SKIPPED = "skipped"  # no permission, audit-only run: nothing attempted
+    BLOCKED = "blocked"  # no permission or verification failed on an --apply run
+    EXISTS = "exists"  # ruleset already present (detail: ruleset id)
+    MISSING = "missing"  # drift found on a dry run (detail: "dry-run")
+    CREATED = "created"  # ruleset created (detail: ruleset id)
+    COMPLIANT = "compliant"  # default branch already carries the law
+    COMPLIANT_AFTER_CHECKOUT = "compliant-after-checkout"  # fresh branch, payload produced no diff
+    PR = "pr"  # repair PR open (detail: PR url)
+
+
+class RowKind(str, Enum):
+    ORG_RULESET = "org-ruleset"
+    REPO_RULESET = "repo-ruleset"
+    FILES = "files"
+
+
+_RULESET_OUTCOMES = frozenset({Outcome.SKIPPED, Outcome.BLOCKED, Outcome.EXISTS, Outcome.MISSING, Outcome.CREATED})
+ALLOWED_OUTCOMES: dict[RowKind, frozenset[Outcome]] = {
+    RowKind.ORG_RULESET: _RULESET_OUTCOMES,
+    RowKind.REPO_RULESET: _RULESET_OUTCOMES,
+    RowKind.FILES: frozenset(
+        {Outcome.BLOCKED, Outcome.MISSING, Outcome.COMPLIANT, Outcome.COMPLIANT_AFTER_CHECKOUT, Outcome.PR}
+    ),
+}
+
+
+def status(outcome: Outcome, detail: str | None = None) -> str:
+    """Format a stored status string (the only writer of status values)."""
+    if not isinstance(outcome, Outcome):
+        raise TypeError(f"unknown outcome: {outcome!r}")
+    return outcome.value if detail is None else f"{outcome.value}:{detail}"
+
+
+def parse_status(text: str) -> tuple[Outcome | None, str | None]:
+    """Read a stored status string. Tolerant: an unknown prefix yields (None, text)."""
+    head, sep, detail = text.partition(":")
+    try:
+        outcome = Outcome(head)
+    except ValueError:
+        return None, text
+    return outcome, (detail if sep else None)
+
+
+def is_blocking(text: str) -> bool:
+    outcome, _ = parse_status(text)
+    # Legacy reports were judged by a bare prefix check; keep honouring that for unknown values.
+    return outcome is Outcome.BLOCKED or (outcome is None and text.startswith("blocked"))
+
+
+def make_row(scope: str, kind: RowKind, status_text: str) -> dict[str, str]:
+    """Build a report row, refusing (kind, outcome) pairs no step can legally produce."""
+    outcome, _ = parse_status(status_text)
+    if outcome is None or outcome not in ALLOWED_OUTCOMES[kind]:
+        raise ValueError(f"illegal status {status_text!r} for row kind {kind.value!r}")
+    return {"scope": scope, "kind": kind.value, "status": status_text}
+
+
+def exit_code(rows: list[dict[str, str]]) -> int:
+    return 2 if any(is_blocking(row["status"]) for row in rows) else 0
+
+
+# ---------------------------------------------------------------------------
+# Repair lifecycle for one repository (repair_files).
+#
+#   CLONED ──compliant──────────────────────────────────▶ done: compliant
+#     │ ──dry run───────────────────────────────────────▶ done: missing:dry-run
+#     ▼
+#   BRANCH_READY (fresh, or resumed from an existing remote repair branch)
+#     ▼
+#   PAYLOAD_APPLIED ──verify failed─────────────────────▶ done: blocked:payload-verification-failed
+#     │ ──no diff, fresh branch─────────────────────────▶ done: compliant-after-checkout
+#     │ ──no diff, resumed branch (already pushed)──┐
+#     ▼                                             │
+#   COMMITTED ──▶ PUSHED ◀──────────────────────────┘
+#                   ▼
+#                 PR_OPEN ──────────────────────────────▶ done: pr:<url>
+# ---------------------------------------------------------------------------
+
+
+class RepairStage(Enum):
+    CLONED = "cloned"
+    BRANCH_READY = "branch-ready"
+    PAYLOAD_APPLIED = "payload-applied"
+    COMMITTED = "committed"
+    PUSHED = "pushed"
+    PR_OPEN = "pr-open"
+
+
+REPAIR_TRANSITIONS: dict[RepairStage, frozenset[RepairStage]] = {
+    RepairStage.CLONED: frozenset({RepairStage.BRANCH_READY}),
+    RepairStage.BRANCH_READY: frozenset({RepairStage.PAYLOAD_APPLIED}),
+    RepairStage.PAYLOAD_APPLIED: frozenset({RepairStage.COMMITTED, RepairStage.PUSHED}),
+    RepairStage.COMMITTED: frozenset({RepairStage.PUSHED}),
+    RepairStage.PUSHED: frozenset({RepairStage.PR_OPEN}),
+    RepairStage.PR_OPEN: frozenset(),
+}
+
+
+class IllegalTransition(RuntimeError):
+    pass
+
+
+class RepairRun:
+    """Tracks one repository's repair stage; every move goes through advance()."""
+
+    def __init__(self) -> None:
+        self.stage = RepairStage.CLONED
+        self.resumed_branch = False
+
+    def advance(self, to: RepairStage) -> None:
+        if to not in REPAIR_TRANSITIONS[self.stage]:
+            raise IllegalTransition(f"{self.stage.value} -> {to.value}")
+        # A branch that was never pushed cannot skip the commit.
+        if self.stage is RepairStage.PAYLOAD_APPLIED and to is RepairStage.PUSHED and not self.resumed_branch:
+            raise IllegalTransition("payload-applied -> pushed requires a resumed remote branch")
+        self.stage = to
 
 
 @dataclass(frozen=True)
@@ -158,36 +291,30 @@ def base_rules() -> list[dict[str, Any]]:
     ]
 
 
-def ensure_org_ruleset(owner: str, *, apply: bool) -> str:
-    if not is_org(owner):
-        return "skipped:not-org"
-    listed = gh_api(f"/orgs/{owner}/rulesets", check=False)
+def _ensure_ruleset(list_path: str, payload: dict[str, Any], *, apply: bool, denied: str) -> str:
+    """Shared list-then-create transition for org and repo rulesets."""
+    listed = gh_api(list_path, check=False)
     if listed.returncode != 0:
-        if not apply:
-            return "skipped:admin-org-scope-required"
-        return "blocked:admin-org-scope-required"
+        return status(Outcome.BLOCKED if apply else Outcome.SKIPPED, denied)
     for item in json.loads(listed.stdout or "[]"):
         if item.get("name") == RULESET_NAME:
-            return f"exists:{item.get('id')}"
+            return status(Outcome.EXISTS, str(item.get("id")))
     if not apply:
-        return "missing:dry-run"
-    created = gh_api(f"/orgs/{owner}/rulesets", method="POST", payload=org_ruleset_payload())
-    return f"created:{json.loads(created.stdout).get('id')}"
+        return status(Outcome.MISSING, "dry-run")
+    created = gh_api(list_path, method="POST", payload=payload)
+    return status(Outcome.CREATED, str(json.loads(created.stdout).get("id")))
+
+
+def ensure_org_ruleset(owner: str, *, apply: bool) -> str:
+    if not is_org(owner):
+        return status(Outcome.SKIPPED, "not-org")
+    return _ensure_ruleset(f"/orgs/{owner}/rulesets", org_ruleset_payload(), apply=apply, denied="admin-org-scope-required")
 
 
 def ensure_repo_ruleset(repo: Repo, *, apply: bool) -> str:
-    listed = gh_api(f"/repos/{repo.name_with_owner}/rulesets", check=False)
-    if listed.returncode != 0:
-        if not apply:
-            return "skipped:repo-admin-required"
-        return "blocked:repo-admin-required"
-    for item in json.loads(listed.stdout or "[]"):
-        if item.get("name") == RULESET_NAME:
-            return f"exists:{item.get('id')}"
-    if not apply:
-        return "missing:dry-run"
-    created = gh_api(f"/repos/{repo.name_with_owner}/rulesets", method="POST", payload=repo_ruleset_payload())
-    return f"created:{json.loads(created.stdout).get('id')}"
+    return _ensure_ruleset(
+        f"/repos/{repo.name_with_owner}/rulesets", repo_ruleset_payload(), apply=apply, denied="repo-admin-required"
+    )
 
 
 def hub_recipe() -> str:
@@ -405,24 +532,34 @@ def repair_files(repo: Repo, *, apply: bool, branch: str, workdir: Path) -> str:
         shutil.rmtree(repo_dir)
     cp = run(["gh", "repo", "clone", repo.name_with_owner, str(repo_dir), "--", "--depth", "1", "--branch", repo.default_branch], check=False)
     if cp.returncode != 0:
-        return "blocked:clone-failed"
+        return status(Outcome.BLOCKED, "clone-failed")
+    state = RepairRun()
     if repo_is_compliant(repo_dir):
-        return "compliant"
+        return status(Outcome.COMPLIANT)
     if not apply:
-        return "missing:dry-run"
+        return status(Outcome.MISSING, "dry-run")
 
     run(["git", "config", "user.name", "agent-law-provisioner"], cwd=repo_dir)
     run(["git", "config", "user.email", "agent-law-provisioner@users.noreply.github.com"], cwd=repo_dir)
     if remote_branch_exists(repo, branch):
         run(["git", "fetch", "origin", branch], cwd=repo_dir)
         run(["git", "checkout", "-B", branch, f"origin/{branch}"], cwd=repo_dir)
+        state.resumed_branch = True
     else:
         run(["git", "checkout", "-B", branch], cwd=repo_dir)
+    state.advance(RepairStage.BRANCH_READY)
     apply_payload(repo_dir)
-    if repo_is_compliant(repo_dir) is False:
-        return "blocked:payload-verification-failed"
+    if not repo_is_compliant(repo_dir):
+        return status(Outcome.BLOCKED, "payload-verification-failed")
+    state.advance(RepairStage.PAYLOAD_APPLIED)
     if not run(["git", "status", "--short"], cwd=repo_dir).stdout.strip():
-        return "compliant-after-checkout"
+        if not state.resumed_branch:
+            return status(Outcome.COMPLIANT_AFTER_CHECKOUT)
+        # The repair branch is already on the remote with the full payload (an earlier run pushed it but
+        # its PR was never opened or was closed). Go straight to the PR step instead of reporting the
+        # repo as compliant while its default branch is still drifting.
+        state.advance(RepairStage.PUSHED)
+        return _open_repair_pr(repo, branch, repo_dir, state)
     run(["git", "add", "-f", "AGENTS.md", "CLAUDE.md", "CONTRIBUTING.md", ".github/workflows/agent-law.yml"], cwd=repo_dir)
     for candidate in [
         "docs/agent-law/empower-orchestrator.md",
@@ -442,10 +579,17 @@ def repair_files(repo: Repo, *, apply: bool, branch: str, workdir: Path) -> str:
         "-m",
         "Make Empower Orchestrator law repo-local\n\nConstraint: Provisioned by the Agent Law hub to repair a missing or drifting repo.\nRejected: Leaving new repos to inherit only global defaults | Agents and reviewers need repo-local law.\nConfidence: high\nScope-risk: moderate\nDirective: Keep EMPOWER_ORCHESTRATOR markers and agent-law workflow in sync.\nTested: Provisioner verified required files and marker presence before commit.\nNot-tested: Repository-specific application build/test suites.",
     ], cwd=repo_dir)
+    state.advance(RepairStage.COMMITTED)
     run(["git", "push", "-u", "origin", branch], cwd=repo_dir)
+    state.advance(RepairStage.PUSHED)
+    return _open_repair_pr(repo, branch, repo_dir, state)
+
+
+def _open_repair_pr(repo: Repo, branch: str, repo_dir: Path, state: RepairRun) -> str:
     existing = run(["gh", "pr", "list", "--repo", repo.name_with_owner, "--head", branch, "--json", "url", "--jq", ".[0].url // empty"], check=False).stdout.strip()
     if existing:
-        return f"pr:{existing}"
+        state.advance(RepairStage.PR_OPEN)
+        return status(Outcome.PR, existing)
     body = f"""## Summary
 
 The Agent Law provisioner found `{repo.name_with_owner}` missing or drifting from the Empower Orchestrator law and repaired it with repo-local doctrine plus the `agent-law` workflow.
@@ -471,7 +615,8 @@ The Agent Law provisioner found `{repo.name_with_owner}` missing or drifting fro
         "--body-file",
         str(body_path),
     ], cwd=repo_dir)
-    return f"pr:{created.stdout.strip().splitlines()[-1]}"
+    state.advance(RepairStage.PR_OPEN)
+    return status(Outcome.PR, created.stdout.strip().splitlines()[-1])
 
 
 def main() -> int:
@@ -490,27 +635,29 @@ def main() -> int:
         print("::warning::GH_TOKEN/GITHUB_TOKEN is not set; gh auth must already be configured", file=sys.stderr)
 
     rows: list[dict[str, str]] = []
+
+    def record(scope: str, kind: RowKind, status_text: str) -> None:
+        rows.append(make_row(scope, kind, status_text))
+        print(f"{scope}\t{kind.value}\t{status_text}")
+
     if args.ensure_org_ruleset:
-        status = ensure_org_ruleset(args.owner, apply=args.apply)
-        rows.append({"scope": args.owner, "kind": "org-ruleset", "status": status})
-        print(f"{args.owner}\torg-ruleset\t{status}")
+        record(args.owner, RowKind.ORG_RULESET, ensure_org_ruleset(args.owner, apply=args.apply))
 
     repos = list_repos(args.owner)
     with tempfile.TemporaryDirectory(prefix="agent-law-provision-") as tmp:
         workdir = Path(tmp)
         for repo in repos:
             if args.ensure_repo_rulesets:
-                status = ensure_repo_ruleset(repo, apply=args.apply)
-                rows.append({"scope": repo.name_with_owner, "kind": "repo-ruleset", "status": status})
-                print(f"{repo.name_with_owner}\trepo-ruleset\t{status}")
+                record(repo.name_with_owner, RowKind.REPO_RULESET, ensure_repo_ruleset(repo, apply=args.apply))
             if args.repair_files:
-                status = repair_files(repo, apply=args.apply, branch=args.branch, workdir=workdir)
-                rows.append({"scope": repo.name_with_owner, "kind": "files", "status": status})
-                print(f"{repo.name_with_owner}\tfiles\t{status}")
+                record(
+                    repo.name_with_owner,
+                    RowKind.FILES,
+                    repair_files(repo, apply=args.apply, branch=args.branch, workdir=workdir),
+                )
 
-    Path("agent-law-provisioner-results.json").write_text(json.dumps(rows, indent=2) + "\n")
-    blocked = [row for row in rows if row["status"].startswith("blocked")]
-    return 2 if blocked else 0
+    Path(RESULTS_FILE).write_text(json.dumps(rows, indent=2) + "\n")
+    return exit_code(rows)
 
 
 if __name__ == "__main__":
