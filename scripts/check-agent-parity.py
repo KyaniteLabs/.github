@@ -14,12 +14,10 @@ Exit codes:
 import argparse
 import json
 import re
-import subprocess
 import sys
+from dataclasses import asdict, dataclass
+from enum import Enum
 from pathlib import Path
-from dataclasses import dataclass, asdict
-from typing import Optional
-
 
 # Sections that must be identical in both CLAUDE.md and AGENTS.md
 CANONICAL_SECTIONS = [
@@ -57,6 +55,43 @@ EXCLUDED_SECTIONS = [
 ]
 
 
+class ParityStatus(str, Enum):
+    """Verdict for one repo. Stored/printed as the plain string value ("pass" / "warn" / "fail").
+
+    Derived only by derive_status() from (parity_score, has_claude_md, has_agents_md):
+
+        both files and score >= 0.9  -> PASS
+        both files and score >= 0.7  -> WARN
+        anything else                -> FAIL   (a missing file always fails)
+
+    Only FAIL breaks --ci.
+    """
+
+    PASS = "pass"
+    WARN = "warn"
+    FAIL = "fail"
+
+
+PASS_THRESHOLD = 0.9
+WARN_THRESHOLD = 0.7
+
+
+def derive_status(parity_score: float, has_claude_md: bool, has_agents_md: bool) -> ParityStatus:
+    """The single place a ParityStatus is decided."""
+    if not (has_claude_md and has_agents_md):
+        return ParityStatus.FAIL
+    if parity_score >= PASS_THRESHOLD:
+        return ParityStatus.PASS
+    if parity_score >= WARN_THRESHOLD:
+        return ParityStatus.WARN
+    return ParityStatus.FAIL
+
+
+def parse_status(value: str) -> ParityStatus:
+    """Read a status from a stored JSON report. Tolerant of case/whitespace; unknown values raise."""
+    return ParityStatus(value.strip().lower())
+
+
 @dataclass
 class ParityResult:
     repo: str
@@ -69,7 +104,7 @@ class ParityResult:
     missing_sections_claude: list[str]
     missing_sections_agents: list[str]
     content_differences: list[str]
-    status: str  # "pass", "warn", "fail"
+    status: ParityStatus
 
 
 def strip_agent_specific(content: str) -> str:
@@ -138,7 +173,8 @@ def check_section_parity(claude_content: str, agents_content: str) -> tuple[floa
 
         total += 1
 
-        if claude_match and agents_match:
+        # A section that exists but has an empty body ("" from extract_sections) is still present.
+        if claude_match is not None and agents_match is not None:
             # Compare content (normalized)
             claude_norm = normalize_for_comparison(claude_match)
             agents_norm = normalize_for_comparison(agents_match)
@@ -154,10 +190,12 @@ def check_section_parity(claude_content: str, agents_content: str) -> tuple[floa
                     differences.append(
                         f"Section '{section_name}' differs (similarity: {similarity:.0%})"
                     )
-        elif claude_match and not agents_match:
+        elif claude_match is not None:
             differences.append(f"Section '{section_name}' missing from AGENTS.md")
-        elif agents_match and not claude_match:
+        elif agents_match is not None:
             differences.append(f"Section '{section_name}' missing from CLAUDE.md")
+        else:
+            differences.append(f"Section '{section_name}' missing from both CLAUDE.md and AGENTS.md")
 
     score = matched / total if total > 0 else 0.0
     return score, differences
@@ -238,13 +276,7 @@ def check_repo(repo_path: Path) -> ParityResult:
         parity_score = 0.0
         differences = ["Neither CLAUDE.md nor AGENTS.md exists"]
 
-    # Determine status
-    if parity_score >= 0.9 and has_claude and has_agents:
-        status = "pass"
-    elif parity_score >= 0.7:
-        status = "warn"
-    else:
-        status = "fail"
+    status = derive_status(parity_score, has_claude, has_agents)
 
     return ParityResult(
         repo=repo_name,
@@ -269,18 +301,7 @@ def main():
     args = parser.parse_args()
 
     # Discover repos
-    repos = []
-    if args.repos_dir:
-        repos_dir = Path(args.repos_dir)
-        repos = sorted(repos_dir.iterdir())
-    else:
-        # Check current directory
-        repos = [Path.cwd()]
-
-    results = []
-    for repo in repos:
-        if repo.is_dir() and not repo.name.startswith('.'):
-            results.append(check_repo(repo))
+    results = [check_repo(repo) for repo in discover_repos(args.repos_dir)]
 
     # Output
     if args.json:
@@ -295,32 +316,50 @@ def main():
             agents_mark = "YES" if r.has_agents_md else "NO"
             print(
                 f"{r.repo:<25} {claude_mark:>10} {agents_mark:>10} "
-                f"{r.parity_score:>7.0%} {r.status:>8}"
+                f"{r.parity_score:>7.0%} {r.status.value:>8}"
             )
 
         # Summary
-        total = len(results)
-        passing = sum(1 for r in results if r.status == "pass")
-        failing = sum(1 for r in results if r.status == "fail")
-        warnings = sum(1 for r in results if r.status == "warn")
-
-        print(f"\nTotal: {total} | Pass: {passing} | Warn: {warnings} | Fail: {failing}")
+        counts = count_by_status(results)
+        print(
+            f"\nTotal: {len(results)} | Pass: {counts[ParityStatus.PASS]} | "
+            f"Warn: {counts[ParityStatus.WARN]} | Fail: {counts[ParityStatus.FAIL]}"
+        )
 
         # Details for failures/warnings
         for r in results:
-            if r.status != "pass":
-                print(f"\n## {r.repo} (status: {r.status})")
+            if r.status is not ParityStatus.PASS:
+                print(f"\n## {r.repo} (status: {r.status.value})")
                 if r.content_differences:
                     for diff in r.content_differences:
                         print(f"  - {diff}")
 
     # Exit code
-    if args.ci:
-        failures = sum(1 for r in results if r.status == "fail")
-        if failures > 0:
-            sys.exit(1)
+    sys.exit(exit_code(results, ci=args.ci))
 
-    sys.exit(0)
+
+def discover_repos(repos_dir: str | None) -> list[Path]:
+    """Repos to check: every non-hidden child of --repos-dir, else the current directory itself.
+
+    The hidden-directory filter only applies to discovered children: the current directory is
+    checked even when its own name starts with a dot (e.g. this `.github` repo).
+    """
+    if repos_dir:
+        return [p for p in sorted(Path(repos_dir).iterdir()) if p.is_dir() and not p.name.startswith(".")]
+    return [Path.cwd()]
+
+
+def count_by_status(results: list[ParityResult]) -> dict[ParityStatus, int]:
+    counts = {s: 0 for s in ParityStatus}
+    for r in results:
+        counts[r.status] += 1
+    return counts
+
+
+def exit_code(results: list[ParityResult], *, ci: bool) -> int:
+    if ci and count_by_status(results)[ParityStatus.FAIL] > 0:
+        return 1
+    return 0
 
 
 if __name__ == "__main__":
