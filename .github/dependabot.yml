@@ -10,3 +10,8 @@ updates:
       - "ci"
     commit-message:
       prefix: "ci(deps)"
+    # One weekly PR for all action bumps instead of one PR (and one CI run) each.
+    groups:
+      github-actions:
+        patterns: ["*"]
+    open-pull-requests-limit: 3
