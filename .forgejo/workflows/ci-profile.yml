@@ -18,12 +18,24 @@ on:
         description: Publish main-branch evidence to the ci-evidence branch (Layer 3 before/after baseline)
         type: boolean
         default: false
+      cache:
+        description: >-
+          Reuse package-manager download caches (npm, pnpm, corepack, pip, uv and
+          uv-managed Pythons). Downloads only: every run still builds a fresh
+          environment from the lockfile, and only branch pushes write the cache.
+        type: boolean
+        default: true
+      timeout_minutes:
+        description: Upper bound for ci/required, so a hang cannot hold a runner slot for hours
+        type: number
+        default: 30
 permissions:
   contents: read
 jobs:
   required:
     name: ci/required
     runs-on: ${{ inputs.runner }}
+    timeout-minutes: ${{ inputs.timeout_minutes }}
     permissions:
       contents: read
     container:
@@ -32,11 +44,35 @@ jobs:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           persist-credentials: false
+      # Informational only: callers may pass an image without node or python
+      # (the action installs python3 itself), so a missing tool must not fail here.
       - name: Record toolchain
         run: |
-          node --version
-          python3 --version
-          git --version
+          node --version || echo "node: not in this image"
+          python3 --version || echo "python3: not in this image (the profile action installs it)"
+          git --version || echo "git: not in this image"
+      # Download caches only (never node_modules or .venv), keyed on this repo,
+      # the image and every lockfile, so a dependency change starts a new entry
+      # and the profile still installs into a fresh environment. Restored on
+      # every run; saved only by branch pushes (below) so a pull request can
+      # never write what main later reads. Cache trouble never fails the gate.
+      - name: Restore dependency download cache
+        id: deps-cache
+        if: ${{ inputs.cache }}
+        continue-on-error: true
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: |
+            ~/.npm
+            ~/.cache/pip
+            ~/.cache/uv
+            ~/.cache/pnpm
+            ~/.cache/node/corepack
+            ~/.local/share/pnpm/store
+            ~/.local/share/uv/python
+          key: ci-profile-deps-v1-${{ github.repository }}-${{ runner.arch }}-${{ inputs.image }}-${{ hashFiles('**/package-lock.json', '**/pnpm-lock.yaml', '**/yarn.lock', '**/uv.lock', '**/requirements*.txt', '**/pyproject.toml', '.ci/profile.json') }}
+          restore-keys: |
+            ci-profile-deps-v1-${{ github.repository }}-${{ runner.arch }}-${{ inputs.image }}-
       # Remote action downloads happen before steps and cannot use this server's
       # short-lived job authentication. Check out the pinned public source using
       # the normal job token, then execute it as a local composite action.
@@ -49,6 +85,22 @@ jobs:
       - uses: ./.ci-contract/actions/ci-profile
         with:
           profile: ${{ inputs.profile }}
+      # Inside a reusable workflow Forgejo reports event_name as workflow_call,
+      # so tell pull requests (refs/pull/...) from branch pushes by the ref.
+      - name: Save dependency download cache
+        if: ${{ inputs.cache && startsWith(github.ref, 'refs/heads/') && steps.deps-cache.outputs.cache-hit != 'true' }}
+        continue-on-error: true
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: |
+            ~/.npm
+            ~/.cache/pip
+            ~/.cache/uv
+            ~/.cache/pnpm
+            ~/.cache/node/corepack
+            ~/.local/share/pnpm/store
+            ~/.local/share/uv/python
+          key: ${{ steps.deps-cache.outputs.cache-primary-key }}
       - name: Retain verification evidence
         if: ${{ always() }}
         uses: https://code.forgejo.org/forgejo/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32 # v3
@@ -70,6 +122,7 @@ jobs:
     # confirm this is the head of the default branch.
     if: ${{ inputs.publish_evidence && startsWith(github.ref, 'refs/heads/') }}
     runs-on: ${{ inputs.runner }}
+    timeout-minutes: 10
     permissions:
       contents: write
     container:
