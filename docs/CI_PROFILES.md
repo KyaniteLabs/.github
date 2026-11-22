@@ -6,8 +6,14 @@ visible. The shared `actions/ci-profile` action runs a project-owned
 change does not silently alter every project's checks.
 
 `.forgejo/workflows/ci-profile.yml` exposes the same action as a reusable workflow.
-It accepts `profile`, `runner`, `image`, and `artifact_paths`; the defaults use an
-existing Docker runner and a digest-pinned Node/Debian environment. Consumers own
+It accepts `profile`, `runner`, `image`, `artifact_paths`, `publish_evidence`,
+`cache` and `timeout_minutes`; the defaults use an existing Docker runner and a
+digest-pinned Node/Debian environment. `cache` (default on) restores package-manager
+download caches (npm, pnpm, corepack, pip, uv and uv-managed Pythons) keyed on the
+repository, image and lockfiles; the profile still installs into a fresh environment,
+and only branch pushes save the cache, so a pull request never writes what main
+reads. `timeout_minutes` (default 30, about 2.5 times the slowest observed run)
+bounds `ci/required` so a hang cannot hold a runner slot. Consumers own
 their trigger and PR cancellation policy. Keep private hooks and credentials in
 the project layer, and retain reports from workspace subdirectories explicitly.
 The workflow checks out its pinned shared action with the ordinary short-lived

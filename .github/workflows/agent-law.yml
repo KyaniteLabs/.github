@@ -8,9 +8,15 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  # Cancel superseded runs on the same PR; queue and merge-group runs are never replaced.
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number && format('pr-{0}', github.event.pull_request.number) || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   agent-law:
     name: agent-law
+    timeout-minutes: 10
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

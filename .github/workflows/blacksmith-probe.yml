@@ -18,15 +18,14 @@ jobs:
     runs-on: blacksmith-2vcpu-ubuntu-2404
     timeout-minutes: 5
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          persist-credentials: false
-
+      # No checkout: the probe proves the runner, and the repository shape below
+      # comes from one API call, so a large repository costs no clone time.
       - name: Runner identity
+        env:
+          PROBE_LABEL: ${{ inputs.probe_label }}
         run: |
           set -euo pipefail
-          echo "probe_label=${{ inputs.probe_label }}"
+          echo "probe_label=${PROBE_LABEL}"
           echo "repo=${GITHUB_REPOSITORY}"
           echo "runner=${RUNNER_NAME:-unknown}"
           echo "runner_os=${RUNNER_OS:-unknown}"
@@ -38,11 +37,14 @@ jobs:
           go version 2>/dev/null || true
 
       - name: Repository shape
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          printf 'default_branch=%s\n' "${GITHUB_REF_NAME:-unknown}"
-          find . -maxdepth 2 -type f \
-            -not -path './.git/*' \
-            -not -path './node_modules/*' \
+          printf 'ref=%s\n' "${GITHUB_REF_NAME:-unknown}"
+          # Files at most two levels deep, as `find . -maxdepth 2 -type f` listed them.
+          gh api "repos/${GITHUB_REPOSITORY}/git/trees/${GITHUB_SHA}?recursive=1" \
+            --jq '.tree[] | select(.type == "blob") | .path' \
+            | awk -F/ 'NF <= 2 { print "./" $0 }' \
             | sort \
             | sed -n '1,80p'
