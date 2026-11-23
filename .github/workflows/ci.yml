@@ -1,6 +1,9 @@
 name: CI
 
 on:
+  # main pushes run too: green main CI is what triggers the Forgejo mirror sync.
+  push:
+    branches: [main]
   pull_request:
   merge_group:
   workflow_dispatch:
