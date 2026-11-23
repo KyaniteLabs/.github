@@ -1,0 +1,32 @@
+{
+  "source_sha": "5443f0908ee455b26deae7a73cbbc71500b02259",
+  "run": 1231,
+  "reports": [
+    {
+      "name": "pytest-fast-1",
+      "sha256": "b85fe7838ac7a338058e16d65cf05b23ad99c7d32e6fd03ae59a3955c7fde878",
+      "cases": 2180,
+      "seconds": 317.684
+    },
+    {
+      "name": "pytest-fast-0",
+      "sha256": "c68b883b996bcf375fa4d6bdc014ae49697acab9277b64aaa16501715fce965e",
+      "cases": 2273,
+      "seconds": 525.363
+    },
+    {
+      "name": "pytest-fast-2",
+      "sha256": "666b18dbc8f08cb3544da642528e2520139c33265cffd49df40d6bf3b28386ff",
+      "cases": 2736,
+      "seconds": 646.04
+    },
+    {
+      "name": "pytest-fast-3",
+      "sha256": "013b285afbbecb083980afbfaaf9c57bb42dc3888b01ea61022e7145ed47ec90",
+      "cases": 2030,
+      "seconds": 317.661
+    }
+  ],
+  "case_count": 9219,
+  "case_outcome_sha256": "7ec2153f5d32ad2f15832d7110d58490caedfd750097c177d197038750430670"
+}

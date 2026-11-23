@@ -1,0 +1,182 @@
+name: Project CI profile
+on:
+  workflow_call:
+    inputs:
+      profile:
+        type: string
+        default: .ci/profile.json
+      runner:
+        type: string
+        default: docker
+      image:
+        type: string
+        default: node:26-bookworm@sha256:5c4012d11d9857c42713ba511fbc19645cac1706bb710d51d42b0d301dff7f88
+      artifact_paths:
+        type: string
+        default: .ci-results/
+      publish_evidence:
+        description: Publish main-branch evidence to the ci-evidence branch (Layer 3 before/after baseline)
+        type: boolean
+        default: false
+      cache:
+        description: >-
+          Reuse package-manager download caches (npm, pnpm, corepack, pip, uv and
+          uv-managed Pythons). Downloads only: every run still builds a fresh
+          environment from the lockfile, and only branch pushes write the cache.
+        type: boolean
+        default: true
+      timeout_minutes:
+        description: Upper bound for ci/required, so a hang cannot hold a runner slot for hours
+        type: number
+        default: 30
+permissions:
+  contents: read
+jobs:
+  required:
+    name: ci/required
+    runs-on: ${{ inputs.runner }}
+    timeout-minutes: ${{ inputs.timeout_minutes }}
+    permissions:
+      contents: read
+    container:
+      image: ${{ inputs.image }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
+      # Informational only: callers may pass an image without node or python
+      # (the action installs python3 itself), so a missing tool must not fail here.
+      - name: Record toolchain
+        run: |
+          node --version || echo "node: not in this image"
+          python3 --version || echo "python3: not in this image (the profile action installs it)"
+          git --version || echo "git: not in this image"
+      # Download caches only (never node_modules or .venv), keyed on this repo,
+      # the image and every lockfile, so a dependency change starts a new entry
+      # and the profile still installs into a fresh environment. Restored on
+      # every run; saved only by branch pushes (below) so a pull request can
+      # never write what main later reads. Cache trouble never fails the gate.
+      - name: Restore dependency download cache
+        id: deps-cache
+        if: ${{ inputs.cache }}
+        continue-on-error: true
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: |
+            ~/.npm
+            ~/.cache/pip
+            ~/.cache/uv
+            ~/.cache/pnpm
+            ~/.cache/node/corepack
+            ~/.local/share/pnpm/store
+            ~/.local/share/uv/python
+          key: ci-profile-deps-v1-${{ github.repository }}-${{ runner.arch }}-${{ inputs.image }}-${{ hashFiles('**/package-lock.json', '**/pnpm-lock.yaml', '**/yarn.lock', '**/uv.lock', '**/requirements*.txt', '**/pyproject.toml', '.ci/profile.json') }}
+          restore-keys: |
+            ci-profile-deps-v1-${{ github.repository }}-${{ runner.arch }}-${{ inputs.image }}-
+      # Remote action downloads happen before steps and cannot use this server's
+      # short-lived job authentication. Check out the pinned public source using
+      # the normal job token, then execute it as a local composite action.
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          repository: KyaniteLabs/.github
+          ref: 88a9bb66173e59656badfc9ddfb21b92ec812212
+          path: .ci-contract
+          persist-credentials: false
+      - uses: ./.ci-contract/actions/ci-profile
+        with:
+          profile: ${{ inputs.profile }}
+      # Inside a reusable workflow Forgejo reports event_name as workflow_call,
+      # so tell pull requests (refs/pull/...) from branch pushes by the ref.
+      - name: Save dependency download cache
+        if: ${{ inputs.cache && startsWith(github.ref, 'refs/heads/') && steps.deps-cache.outputs.cache-hit != 'true' }}
+        continue-on-error: true
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: |
+            ~/.npm
+            ~/.cache/pip
+            ~/.cache/uv
+            ~/.cache/pnpm
+            ~/.cache/node/corepack
+            ~/.local/share/pnpm/store
+            ~/.local/share/uv/python
+          key: ${{ steps.deps-cache.outputs.cache-primary-key }}
+      - name: Retain verification evidence
+        if: ${{ always() }}
+        uses: https://code.forgejo.org/forgejo/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32 # v3
+        with:
+          name: ci-evidence
+          path: ${{ inputs.artifact_paths }}
+          if-no-files-found: error
+          retention-days: 14
+  # Layer 3 baseline: main-branch runs publish evidence.json to the ci-evidence
+  # branch so pull requests can print before/after deltas. Only this job asks
+  # for write access. Note: Forgejo 15 does not enforce job token permissions
+  # (a contents: read job can push), so the declaration documents intent and
+  # takes effect if enforcement arrives; it is not a boundary today.
+  publish-evidence:
+    name: ci/evidence-publish
+    needs: required
+    # Inside a reusable workflow Forgejo reports event_name as workflow_call,
+    # so gate on a branch ref (never a pull request) and let the script below
+    # confirm this is the head of the default branch.
+    if: ${{ inputs.publish_evidence && startsWith(github.ref, 'refs/heads/') }}
+    runs-on: ${{ inputs.runner }}
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    container:
+      image: ${{ inputs.image }}
+    steps:
+      - uses: https://code.forgejo.org/forgejo/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # v3
+        with:
+          name: ci-evidence
+          path: .ci-results-main
+      - name: Publish evidence to the ci-evidence branch
+        # Some runners default to sh, which has no pipefail or PIPESTATUS.
+        shell: bash
+        env:
+          TOKEN: ${{ github.token }}
+          SERVER: ${{ github.server_url }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+          REF: ${{ github.ref }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          set -euo pipefail
+          evidence="$GITHUB_WORKSPACE/.ci-results-main/evidence.json"
+          [ -f "$evidence" ] || { echo "evidence.json missing from the ci-evidence artifact" >&2; exit 1; }
+          proto=${SERVER%%://*}; host=${SERVER#*://}
+          url="${proto}://ci:${TOKEN}@${host}/${REPO}.git"
+          quiet() { "$@" 2>&1 | sed "s/${TOKEN}/***/g"; return "${PIPESTATUS[0]}"; }
+          if [ -z "$DEFAULT_BRANCH" ]; then
+            DEFAULT_BRANCH=$(git ls-remote --symref "$url" HEAD 2> >(sed "s/${TOKEN}/***/g" >&2) | awk '/^ref:/ {sub("refs/heads/", "", $2); print $2}')
+          fi
+          if [ -z "$DEFAULT_BRANCH" ] || [ "$REF" != "refs/heads/$DEFAULT_BRANCH" ]; then
+            echo "evidence: $REF is not the default branch (${DEFAULT_BRANCH:-unknown}); not publishing"
+            exit 0
+          fi
+          head=$(git ls-remote "$url" "refs/heads/$DEFAULT_BRANCH" 2> >(sed "s/${TOKEN}/***/g" >&2) | cut -f1)
+          if [ "$head" != "$SHA" ]; then
+            echo "evidence: $SHA is no longer the head of $DEFAULT_BRANCH ($head); not publishing stale evidence"
+            exit 0
+          fi
+          for attempt in 1 2 3; do
+            work=$(mktemp -d); cd "$work"
+            git init -q; git config user.name ci-evidence; git config user.email ci-evidence@invalid
+            if quiet git fetch -q --depth=1 "$url" ci-evidence; then git checkout -q -B ci-evidence FETCH_HEAD; else git checkout -q --orphan ci-evidence; fi
+            mkdir -p evidence
+            cp "$evidence" evidence/main.json
+            python3 -c 'import json,sys; print(json.dumps(json.load(open(sys.argv[1])), sort_keys=True))' "$evidence" >> evidence/history.jsonl
+            tail -n 500 evidence/history.jsonl > evidence/history.tmp && mv evidence/history.tmp evidence/history.jsonl
+            git add evidence
+            git commit -qm "evidence: $DEFAULT_BRANCH ${SHA:0:12}"
+            if quiet git push -q "$url" HEAD:refs/heads/ci-evidence; then
+              echo "evidence: published for ${SHA:0:12} (attempt $attempt)"
+              exit 0
+            fi
+            echo "evidence: push rejected (attempt $attempt); refetching"
+            cd /; sleep $((attempt * 3))
+          done
+          echo "evidence: could not publish after 3 attempts" >&2
+          exit 1

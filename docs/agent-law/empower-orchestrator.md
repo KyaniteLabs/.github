@@ -2,7 +2,7 @@
 
 This repo-local copy makes the doctrine visible to Codex, Claude Code, Kimi Code, GitHub reviewers, and CI. It preserves the four-question blast-radius check as an explicit gate before automation or durable system changes.
 
-Canonical installation source on this machine: `/Users/simongonzalezdecruz/Downloads/2026-05-04-empower-orchestrator-recipe.md`.
+Canonical source: the 2026-05-04 empower-orchestrator recipe, kept in the maintainer's private notes.
 
 Repository: `KyaniteLabs/.github`.
 
