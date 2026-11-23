@@ -1,0 +1,157 @@
+name: Sync Forgejo mirror
+
+# Reusable GitHub -> Forgejo trunk mirror for public repos (CI strategy card 0,
+# GIT-CI-STRATEGY-20261123 §Mirror mechanics). GitHub mechanics force the split:
+# workflow_run events only fire inside the repository that owns the CI, so each
+# repo carries a tiny caller workflow and calls this one. All fail-closed rules
+# live here and in scripts/forgejo_sync.py:
+#   - only a successful push-event run of the configured trunk workflow,
+#     on the exact current trunk tip, gets mirrored (TOCTOU re-checked);
+#   - the mirror only ever fast-forwards (merge-base --is-ancestor gate,
+#     plain push, never --force);
+#   - it can never run on pull_request (the caller's workflow_run trigger
+#     plus the event validation refuse anything but trusted trunk CI);
+#   - credentials live only in the caller's `forgejo-mirror` GitHub
+#     environment (branch-restricted to the trunk) and reach git only through
+#     a scrubbed GIT_ASKPASS helper.
+
+on:
+  workflow_call:
+    inputs:
+      trunk:
+        description: Trunk branch name on both hosts (main or master)
+        required: true
+        type: string
+      trigger-workflow-id:
+        description: Numeric GitHub workflow id of the trunk CI that triggers the sync
+        required: true
+        type: number
+      trigger-workflow-name:
+        description: Workflow name of the trunk CI, exactly as the event payload carries it
+        required: true
+        type: string
+      trigger-workflow-path:
+        description: Workflow path of the trunk CI
+        required: true
+        type: string
+        default: .github/workflows/ci.yml
+      required-workflows:
+        description: Multiline list of numeric-id:.github/workflows/file.yml entries that must be green on the exact SHA
+        required: true
+        type: string
+      forgejo-repository:
+        description: owner/name of the Forgejo mirror repository
+        required: true
+        type: string
+      downstream-workflow:
+        description: Forgejo workflow file to require green after the push; 'none' for read-only mirrors
+        required: true
+        type: string
+        default: none
+      dry-run:
+        description: Verify event, tip and fast-forward ancestry, print the would-be push, push nothing
+        required: false
+        type: boolean
+        default: false
+      toolkit-ref:
+        description: Ref of KyaniteLabs/.github to fetch scripts/forgejo_sync.py from; keep identical to the ref this workflow is called with
+        required: false
+        type: string
+        default: main
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  gate:
+    name: Require exact-head trunk CI
+    if: github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    outputs:
+      sha: ${{ steps.primary.outputs.sha }}
+    steps:
+      - name: Check out the sync toolkit (this repository, pinned ref)
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: KyaniteLabs/.github
+          ref: ${{ inputs.toolkit-ref }}
+          persist-credentials: false
+      - id: primary
+        name: Validate event, tip, and required primary workflows
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -eu
+          args=()
+          while IFS= read -r spec; do
+            spec="${spec#"${spec%%[![:space:]]*}"}"; spec="${spec%"${spec##*[![:space:]]}"}"
+            case "$spec" in
+              '') continue ;;
+              *[!0-9:./A-Za-z_-]*) echo "bad required-workflow spec: $spec" >&2; exit 1 ;;
+            esac
+            args+=(--required-workflow "$spec")
+          done <<'SPECS'
+          ${{ inputs.required-workflows }}
+          SPECS
+          python scripts/forgejo_sync.py github-gate \
+            --event "$GITHUB_EVENT_PATH" \
+            --repository "$GITHUB_REPOSITORY" \
+            --api-url "$GITHUB_API_URL" \
+            --trunk "${{ inputs.trunk }}" \
+            --trigger-workflow-id "${{ inputs.trigger-workflow-id }}" \
+            --trigger-workflow-name "${{ inputs.trigger-workflow-name }}" \
+            --trigger-workflow-path "${{ inputs.trigger-workflow-path }}" \
+            "${args[@]}" >>"$GITHUB_OUTPUT"
+
+  push:
+    name: Fast-forward the Forgejo mirror
+    needs: gate
+    if: needs.gate.result == 'success' && needs.gate.outputs.sha != ''
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    permissions:
+      contents: read
+    environment: forgejo-mirror
+    steps:
+      - name: Check out the sync toolkit (this repository, pinned ref)
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: KyaniteLabs/.github
+          ref: ${{ inputs.toolkit-ref }}
+          persist-credentials: false
+      - name: Check out the source repository at the validated SHA
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          ref: ${{ needs.gate.outputs.sha }}
+          path: source
+          persist-credentials: false
+      - name: Revalidate current GitHub trunk before credentials
+        env:
+          SOURCE_SHA: ${{ needs.gate.outputs.sha }}
+        run: |
+          python scripts/forgejo_sync.py source-tip \
+            --repository-dir "$GITHUB_WORKSPACE/source" \
+            --source-sha "$SOURCE_SHA" \
+            --trunk "${{ inputs.trunk }}"
+      - name: Fast-forward Forgejo mirror
+        env:
+          SOURCE_SHA: ${{ needs.gate.outputs.sha }}
+          MIRROR_FORGEJO_USERNAME: ${{ vars.MIRROR_FORGEJO_USERNAME }}
+          MIRROR_FORGEJO_TOKEN: ${{ secrets.MIRROR_FORGEJO_TOKEN }}
+        run: |
+          set -eu
+          dry=()
+          if [ "${{ inputs.dry-run }}" = "true" ]; then dry=(--dry-run); fi
+          python scripts/forgejo_sync.py sync \
+            --repository-dir "$GITHUB_WORKSPACE/source" \
+            --source-sha "$SOURCE_SHA" \
+            --trunk "${{ inputs.trunk }}" \
+            --forgejo-git-url "https://git.kyanitelabs.tech/${{ inputs.forgejo-repository }}.git" \
+            --forgejo-api-url "https://git.kyanitelabs.tech/api/v1" \
+            --forgejo-repository "${{ inputs.forgejo-repository }}" \
+            --downstream-workflow "${{ inputs.downstream-workflow }}" \
+            "${dry[@]}"
