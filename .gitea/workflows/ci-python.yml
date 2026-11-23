@@ -1,16 +1,14 @@
 name: Python CI
+# Declare the project's .ci/profile.json first; see docs/CI_PROFILES.md.
 on:
   push:
     branches: [main]
   pull_request:
     branches: [main]
+concurrency:
+  # Unique per push commit so queued main runs are never replaced; per PR otherwise.
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number && format('pr-{0}', github.event.pull_request.number) || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
-  test:
-    runs-on: docker
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - run: pip install -r requirements.txt
-      - run: pip install pytest && pytest
+  ci:
+    uses: KyaniteLabs/.github/.forgejo/workflows/ci-profile.yml@c897272be925447cca1f42f06291d320f326960f

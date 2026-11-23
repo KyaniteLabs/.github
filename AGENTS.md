@@ -61,15 +61,20 @@ The GITHUB_pipeline runs a triage cycle every 30 minutes. When working in Kyanit
 
 ## CI Standards
 
-All KyaniteLabs repos must have these CI checks (via GitHub Actions on Blacksmith runners):
+Use the repository's canonical host and qualified project commands. Simon-owned
+repositories land on Forgejo first; GitHub is the mirror. The shared contract,
+qualification procedure and measurement lessons live in the
+[CI profiles guide](https://git.kyanitelabs.tech/KyaniteLabs/.github/src/branch/main/docs/CI_PROFILES.md).
+Keep the actual Python, Node, desktop, service or tooling checks project-owned.
 
 ### Required Checks (must pass before merge)
 
-| Check | Tool | Config |
-|-------|------|--------|
-| Lint | ruff | `ruff check . && ruff format --check .` |
-| Test | pytest | `pytest --tb=short -q` |
-| Build | pip install | `pip install -e .` (Python) or equivalent |
+| Check | Evidence |
+|-------|----------|
+| Static validation | Declared lint, type, generated-source or schema checks for this stack |
+| Tests | Real nonempty execution, visible failures and retained reports |
+| Build | Produce the actual package, application or shipped tooling |
+| Acceptance | Exercise the built or installed artifact through a meaningful public entry point |
 
 ### Recommended Checks (add when applicable)
 
@@ -83,20 +88,23 @@ All KyaniteLabs repos must have these CI checks (via GitHub Actions on Blacksmit
 
 ### CI Rules
 
-- All CI runs on `blacksmith-2vcpu-ubuntu-2404` runners
+- Use existing qualified runners and pinned toolchains; do not assume one provider or runner label fits every project.
 - CI must pass on all supported Python/Node versions
 - Never skip CI (`--no-verify`) — if it fails, fix the root cause
-- CI failures on main get auto-detected by the pipeline
+- Required commands propagate failures; do not mask lint, build or test errors with successful fallbacks.
+- Compare whole-workflow and local development time, queue/setup/execution costs and equivalent coverage before claiming a speedup.
+- Verify main-branch failure detection and owner handoff rather than assuming the pipeline provides them.
 
 ## Branch Protection
 
-All `main`/`master` branches in KyaniteLabs repos are protected:
-
-- No direct pushes — everything through PRs
-- Required status checks must pass
-- Branches must be up-to-date before merge
-- Force pushes blocked
-- Linear history required (squash or rebase merge)
+Require reviewed PRs and qualified status checks on the canonical branch.
+Verify the installed protection rules and emitted check names before claiming
+enforcement, including administrator behavior. Preserve existing gates and the
+repository's authorized merge method. Protection changes require the same
+scoped authority as other repository administration; guidance is not proof that
+an administrator has applied it. Use the read-only adoption auditor in the CI
+profiles guide to collect current evidence. Deployment and publication authority
+remain separate from passing CI.
 
 ## Repository Standards
 

@@ -12,6 +12,9 @@ Shared defaults for Kyanite Labs org repositories (GitHub + Forgejo).
 | `workflow-templates/` | Reusable GitHub workflow templates |
 | `docs/agent-law/` | Shared agent workflow rules |
 | `scripts/provision-agent-law.py` | Copy agent-law into target repos |
+| [`docs/CI_PROFILES.md`](docs/CI_PROFILES.md) | Qualified project CI profiles and rollout |
+| [`scripts/ci_experiment.py`](scripts/ci_experiment.py) | Compare retained CI evidence against a declared budget; [usage](docs/CI_EXPERIMENTS.md) |
+| [`scripts/structure_signals.py`](scripts/structure_signals.py) | Layer 6 structure signals (duplication, large files, complex Python functions) reported in CI evidence |
 | `.github/pull_request_template.md` | PR template |
 
 Product install paths and feature docs live in each product repository—not here.

@@ -24,5 +24,29 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Run unit tests
-        run: python3 -m unittest discover -s tests
+      # The same contract the Forgejo ci-profile ran (.ci/profile.json), moved
+      # here when GitHub became this repo's only CI (GIT-CI-STRATEGY-20261123).
+      - name: Install isolated test tools
+        run: python3 -m venv .venv && .venv/bin/pip install --quiet pytest==9.1.1 ruff==0.15.7
+
+      - name: Lint CI contract
+        run: >-
+          .venv/bin/ruff check actions/ci-profile scripts/ci_adoption_audit.py
+          scripts/ci_experiment.py scripts/ci_experiment_evidence.py tests/test_ci_profile.py
+          tests/test_ci_adoption_audit.py tests/test_ci_experiment.py
+          scripts/self_description_check.py tests/test_self_description_check.py
+          scripts/structure_signals.py tests/test_structure_signals.py
+
+      - name: Compile shipped Python tools
+        run: python3 -m compileall -q scripts actions/ci-profile
+
+      - name: Run tests and negative fixtures
+        run: .venv/bin/python -m pytest tests -q --tb=short
+
+      - name: Exercise shipped commands
+        run: |
+          python3 scripts/check-agent-parity.py --help
+          python3 scripts/ci_adoption_audit.py --help
+          python3 scripts/ci_experiment.py --help
+          python3 scripts/self_description_check.py --help
+          python3 scripts/structure_signals.py . > /dev/null
